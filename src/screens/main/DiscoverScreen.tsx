@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Modal, TextInput,
+  ActivityIndicator, Modal, TextInput, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useDiscover } from '../../hooks/useDiscover'
@@ -10,18 +10,30 @@ import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { Profile, SALARY_BADGE_LABELS } from '../../types'
 
 export function DiscoverScreen() {
-  const { profiles, loading, likeProfile, passProfile } = useDiscover()
+  const { profiles, loading, likesRemaining, likeProfile, passProfile } = useDiscover()
   const [matchModal, setMatchModal] = useState(false)
   const [commentModal, setCommentModal] = useState<Profile | null>(null)
   const [comment, setComment] = useState('')
 
   async function handleLike(profile: Profile) {
+    if (likesRemaining <= 0) {
+      Alert.alert('No likes remaining', 'You have used all 4 likes for today. Come back tomorrow!')
+      return
+    }
     const result = await likeProfile(profile.id)
     if (result === 'match') setMatchModal(true)
+    if (result === 'conversation_limit') {
+      Alert.alert('Conversation limit reached', 'You can only have 4 active conversations at a time. Close one to start a new one.')
+    }
   }
 
   async function submitComment() {
     if (!commentModal) return
+    if (likesRemaining <= 0) {
+      Alert.alert('No likes remaining', 'You have used all 4 likes for today.')
+      setCommentModal(null)
+      return
+    }
     const result = await likeProfile(commentModal.id, comment)
     setCommentModal(null)
     setComment('')
@@ -40,7 +52,16 @@ export function DiscoverScreen() {
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Discover</Text>
+        <View style={styles.likesCounter}>
+          <Text style={styles.likesCounterText}>♥ {likesRemaining}/4 left today</Text>
+        </View>
       </View>
+
+      {likesRemaining <= 0 && (
+        <View style={styles.limitBanner}>
+          <Text style={styles.limitText}>You've used all 4 likes for today. Come back tomorrow!</Text>
+        </View>
+      )}
 
       {profiles.length === 0 ? (
         <View style={styles.empty}>
@@ -57,6 +78,7 @@ export function DiscoverScreen() {
               onLike={() => handleLike(profile)}
               onPass={() => passProfile(profile.id)}
               onComment={() => setCommentModal(profile)}
+              likesRemaining={likesRemaining}
             />
           ))}
         </ScrollView>
@@ -103,11 +125,12 @@ export function DiscoverScreen() {
   )
 }
 
-function ProfileCard({ profile, onLike, onPass, onComment }: {
+function ProfileCard({ profile, onLike, onPass, onComment, likesRemaining }: {
   profile: Profile
   onLike: () => void
   onPass: () => void
   onComment: () => void
+  likesRemaining: number
 }) {
   const salaryLabel = profile.salary_range ? SALARY_BADGE_LABELS[profile.salary_range] : null
 
@@ -147,7 +170,11 @@ function ProfileCard({ profile, onLike, onPass, onComment }: {
         <TouchableOpacity style={styles.passBtn} onPress={onPass} activeOpacity={0.7}>
           <Text style={styles.passIcon}>✕</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.likeBtn} onPress={onLike} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={[styles.likeBtn, likesRemaining <= 0 && styles.likeBtnDisabled]}
+          onPress={onLike}
+          activeOpacity={0.7}
+        >
           <Text style={styles.likeIcon}>♥</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.commentBtn} onPress={onComment} activeOpacity={0.7}>
@@ -176,6 +203,10 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 0.5, borderColor: Colors.border },
   headerTitle: { fontSize: 22, fontWeight: '600', color: Colors.text },
+  likesCounter: { backgroundColor: Colors.primaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
+  likesCounterText: { fontSize: 12, fontWeight: '600', color: Colors.primary },
+  limitBanner: { backgroundColor: Colors.primaryLight, padding: Spacing.md, margin: Spacing.lg, borderRadius: Radius.md },
+  limitText: { fontSize: 13, color: Colors.primaryDark, textAlign: 'center', lineHeight: 18 },
   stack: { padding: 14, gap: 14, paddingBottom: 90 },
   card: { backgroundColor: Colors.background, borderRadius: 16, borderWidth: 0.5, borderColor: Colors.border, overflow: 'hidden' },
   photoArea: { height: 280, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
@@ -197,6 +228,7 @@ const styles = StyleSheet.create({
   passBtn: { width: 50, height: 50, borderRadius: 25, borderWidth: 0.5, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
   passIcon: { fontSize: 20, color: Colors.textSecondary },
   likeBtn: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  likeBtnDisabled: { backgroundColor: Colors.borderDark },
   likeIcon: { fontSize: 26, color: '#fff' },
   commentBtn: { width: 50, height: 50, borderRadius: 25, borderWidth: 0.5, borderColor: Colors.blue, alignItems: 'center', justifyContent: 'center' },
   commentIcon: { fontSize: 20 },

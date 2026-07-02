@@ -10,8 +10,22 @@ import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { SALARY_BADGE_LABELS, LOOKING_FOR_LABELS } from '../../types'
 
 export function LikesScreen() {
-  const { likes, count } = useLikesReceived()
+  const { currentLike, currentIndex, count, loading, nextLike, prevLike } = useLikesReceived()
   const PREMIUM = false
+
+  if (loading) {
+    return (
+      <SafeAreaView style={GlobalStyles.safeArea}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Likes You</Text>
+        </View>
+        <View style={styles.centered}>
+          <Text style={styles.emptyIcon}>💫</Text>
+          <Text style={styles.emptyTitle}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
@@ -19,29 +33,79 @@ export function LikesScreen() {
         <Text style={styles.headerTitle}>Likes You</Text>
         <Text style={styles.headerCount}>{count} people</Text>
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
-        {!PREMIUM && (
-          <View style={styles.upgradeBanner}>
-            <Text style={styles.upgradeTitle}>See who likes you</Text>
-            <Text style={styles.upgradeSub}>Upgrade to Premium to see all {count} people.</Text>
-            <TouchableOpacity style={[GlobalStyles.primaryButton, { width: '100%' }]}>
-              <Text style={GlobalStyles.primaryButtonText}>Upgrade — $12/mo</Text>
+
+      {!PREMIUM && (
+        <View style={styles.upgradeBanner}>
+          <Text style={styles.upgradeTitle}>See who likes you</Text>
+          <Text style={styles.upgradeSub}>
+            Upgrade to Premium to see all {count} people — including their salary and career details.
+          </Text>
+          <TouchableOpacity style={[GlobalStyles.primaryButton, { width: '100%' }]}>
+            <Text style={GlobalStyles.primaryButtonText}>Upgrade — $12/mo</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {count === 0 ? (
+        <View style={styles.centered}>
+          <Text style={styles.emptyIcon}>💛</Text>
+          <Text style={styles.emptyTitle}>No likes yet</Text>
+          <Text style={styles.emptySub}>When someone likes you they'll appear here.</Text>
+        </View>
+      ) : (
+        <View style={styles.queueWrap}>
+          <Text style={styles.queueLabel}>
+            {currentIndex + 1} of {count}
+          </Text>
+
+          <View style={styles.likeTile}>
+            <View style={[styles.likeTileInner, !PREMIUM && styles.blurred]}>
+              <Avatar
+                name={currentLike?.liker?.first_name ?? '?'}
+                photo={PREMIUM ? currentLike?.liker?.photos?.[0] : null}
+                size={120}
+              />
+            </View>
+            <View style={styles.likeInfo}>
+              <Text style={styles.likeName}>
+                {PREMIUM ? `${currentLike?.liker?.first_name}, ${currentLike?.liker?.age}` : '• • •'}
+              </Text>
+              {PREMIUM && currentLike?.liker?.job_title && (
+                <Text style={styles.likeJob}>{currentLike.liker.job_title}</Text>
+              )}
+              {PREMIUM && currentLike?.liker?.salary_range && (
+                <View style={styles.salaryBadge}>
+                  <Text style={styles.salaryBadgeText}>
+                    💰 {SALARY_BADGE_LABELS[currentLike.liker.salary_range as keyof typeof SALARY_BADGE_LABELS]}
+                  </Text>
+                </View>
+              )}
+              {currentLike?.message && PREMIUM && (
+                <View style={styles.messageBox}>
+                  <Text style={styles.messageText}>"{currentLike.message}"</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.navRow}>
+            <TouchableOpacity
+              style={[styles.navBtn, currentIndex === 0 && styles.navBtnDisabled]}
+              onPress={prevLike}
+              disabled={currentIndex === 0}
+            >
+              <Text style={styles.navBtnText}>← Previous</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.navBtn, currentIndex === count - 1 && styles.navBtnDisabled]}
+              onPress={nextLike}
+              disabled={currentIndex === count - 1}
+            >
+              <Text style={styles.navBtnText}>Next →</Text>
             </TouchableOpacity>
           </View>
-        )}
-        <View style={styles.likesGrid}>
-          {likes.map((like) => (
-            <View key={like.id} style={styles.likeTile}>
-              <View style={[styles.likeTileInner, !PREMIUM && styles.blurred]}>
-                <Avatar name={like.liker?.first_name ?? '?'} photo={PREMIUM ? like.liker?.photos?.[0] : null} size={80} />
-              </View>
-              <View style={styles.nameOverlay}>
-                <Text style={styles.overlayName} numberOfLines={1}>{PREMIUM ? like.liker?.first_name : '• • •'}</Text>
-              </View>
-            </View>
-          ))}
         </View>
-      </ScrollView>
+      )}
     </SafeAreaView>
   )
 }
@@ -72,7 +136,7 @@ export function ProfileScreen() {
           {profile.industry && <InfoRow icon="🏢" text={profile.industry} />}
           {salaryLabel && (
             <View style={styles.salaryRow}>
-              <Text style={styles.salaryLabel}>💰  Salary range</Text>
+              <Text style={styles.salaryRowLabel}>💰  Salary range</Text>
               <Text style={styles.salaryValue}>{salaryLabel}</Text>
             </View>
           )}
@@ -138,15 +202,29 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 0.5, borderColor: Colors.border },
   headerTitle: { fontSize: 22, fontWeight: '600', color: Colors.text },
   headerCount: { fontSize: 13, color: Colors.textSecondary },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  emptyIcon: { fontSize: 40, marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: 8 },
+  emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   upgradeBanner: { margin: 16, padding: 16, borderRadius: Radius.lg, borderWidth: 0.5, borderColor: Colors.border, backgroundColor: Colors.surface, gap: 10 },
   upgradeTitle: { fontSize: 16, fontWeight: '600', color: Colors.text },
   upgradeSub: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
-  likesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2, padding: 2 },
-  likeTile: { width: '50%', aspectRatio: 3/4, position: 'relative', overflow: 'hidden' },
-  likeTileInner: { flex: 1, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
-  blurred: { opacity: 0.15 },
-  nameOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 8, paddingTop: 24, backgroundColor: 'rgba(0,0,0,0.5)' },
-  overlayName: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  queueWrap: { flex: 1, padding: Spacing.xl, alignItems: 'center' },
+  queueLabel: { fontSize: 13, color: Colors.textSecondary, marginBottom: 16 },
+  likeTile: { width: '100%', backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 0.5, borderColor: Colors.border, overflow: 'hidden', marginBottom: 16 },
+  likeTileInner: { height: 280, alignItems: 'center', justifyContent: 'center' },
+  blurred: { opacity: 0.12 },
+  likeInfo: { padding: Spacing.lg },
+  likeName: { fontSize: 20, fontWeight: '600', color: Colors.text, marginBottom: 4 },
+  likeJob: { fontSize: 14, color: Colors.textSecondary, marginBottom: 8 },
+  salaryBadge: { alignSelf: 'flex-start', backgroundColor: Colors.greenLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 0.5, borderColor: Colors.greenBorder, marginBottom: 8 },
+  salaryBadgeText: { fontSize: 12, fontWeight: '600', color: Colors.green },
+  messageBox: { backgroundColor: Colors.primaryLight, borderRadius: Radius.md, padding: Spacing.md, marginTop: 4 },
+  messageText: { fontSize: 13, color: Colors.primaryDark, fontStyle: 'italic', lineHeight: 19 },
+  navRow: { flexDirection: 'row', gap: 12, width: '100%' },
+  navBtn: { flex: 1, paddingVertical: 12, borderRadius: Radius.full, borderWidth: 0.5, borderColor: Colors.border, alignItems: 'center' },
+  navBtnDisabled: { opacity: 0.3 },
+  navBtnText: { fontSize: 14, color: Colors.text, fontWeight: '500' },
   profileScroll: { padding: Spacing.xl, gap: 12, paddingBottom: 100 },
   profileHero: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 4 },
   profileName: { fontSize: 20, fontWeight: '600', color: Colors.text },
@@ -157,7 +235,7 @@ const styles = StyleSheet.create({
   infoIcon: { fontSize: 15 },
   infoText: { fontSize: 14, color: Colors.text, flex: 1 },
   salaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, marginTop: 6, borderTopWidth: 0.5, borderColor: Colors.border },
-  salaryLabel: { fontSize: 11, fontWeight: '600', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  salaryRowLabel: { fontSize: 11, fontWeight: '600', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 },
   salaryValue: { fontSize: 14, fontWeight: '600', color: Colors.green },
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 0.5, borderColor: Colors.border },

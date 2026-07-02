@@ -3,14 +3,39 @@ import { supabase } from '../lib/supabase'
 import { Profile } from '../types'
 import { useAuth } from './useAuth'
 
+const MAX_LIKES_PER_DAY = 4
+const MAX_CONVERSATIONS = 4
+
 export function useDiscover() {
   const { session, profile } = useAuth()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
+  const [likesRemaining, setLikesRemaining] = useState(MAX_LIKES_PER_DAY)
 
   useEffect(() => {
-    if (profile) fetchProfiles()
+    if (profile) {
+      fetchProfiles()
+      fetchLikesRemaining()
+    }
   }, [profile])
+
+  async function fetchLikesRemaining() {
+    if (!session) return
+    const { data } = await supabase
+      .from('daily_like_counts')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single()
+
+    if (data) {
+      const today = new Date().toISOString().split('T')[0]
+      if (data.like_date === today) {
+        setLikesRemaining(Math.max(0, MAX_LIKES_PER_DAY - data.count))
+      } else {
+        setLikesRemaining(MAX_LIKES_PER_DAY)
+      }
+    }
+  }
 
   async function fetchProfiles() {
     if (!session || !profile) return
@@ -33,8 +58,44 @@ export function useDiscover() {
     setLoading(false)
   }
 
-  async function likeProfile(likedId: string, message?: string): Promise<'match' | 'liked'> {
+  async function checkConversationLimit(): Promise<boolean> {
+    if (!session) return false
+    const { data } = await supabase
+      .from('matches')
+      .select('id')
+      .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
+    return (data?.length ?? 0) < MAX_CONVERSATIONS
+  }
+
+  async function incrementDailyLikes() {
+    if (!session) return
+    const today = new Date().toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('daily_like_counts')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single()
+
+    if (data && data.like_date === today) {
+      await supabase
+        .from('daily_like_counts')
+        .update({ count: data.count + 1 })
+        .eq('user_id', session.user.id)
+    } else {
+      await supabase
+        .from('daily_like_counts')
+        .upsert({ user_id: session.user.id, like_date: today, count: 1 })
+    }
+    setLikesRemaining(prev => Math.max(0, prev - 1))
+  }
+
+  async function likeProfile(likedId: string, message?: string): Promise<'match' | 'liked' | 'no_likes' | 'conversation_limit'> {
     if (!session) return 'liked'
+
+    if (likesRemaining <= 0) return 'no_likes'
+
+    const canConverse = await checkConversationLimit()
+    if (!canConverse) return 'conversation_limit'
 
     await supabase.from('likes').insert({
       liker_id: session.user.id,
@@ -43,11 +104,14 @@ export function useDiscover() {
       passed: false,
     })
 
+    await incrementDailyLikes()
+
     const { data: theirLike } = await supabase
       .from('likes')
       .select('id')
       .eq('liker_id', likedId)
       .eq('liked_id', session.user.id)
+      .eq('passed', false)
       .single()
 
     if (theirLike) {
@@ -78,7 +142,7 @@ export function useDiscover() {
     setProfiles(prev => prev.filter(p => p.id !== id))
   }
 
-  return { profiles, loading, likeProfile, passProfile, refresh: fetchProfiles }
+  return { profiles, loading, likesRemaining, likeProfile, passProfile, refresh: fetchProfiles }
 }
 
 export function useLikesReceived() {
@@ -86,6 +150,7 @@ export function useLikesReceived() {
   const [likes, setLikes] = useState<any[]>([])
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [currentIndex, setCurrentIndex] = useState(0)
 
   useEffect(() => {
     if (!session) return
@@ -95,16 +160,40 @@ export function useLikesReceived() {
   async function fetchLikes() {
     if (!session) return
 
-    const { data, count: total } = await supabase
+    const { data: matchedUsers } = await supabase
+      .from('matches')
+      .select('user1_id, user2_id')
+      .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
+
+    const matchedIds = (matchedUsers ?? [])
+      .flatMap((m: any) => [m.user1_id, m.user2_id])
+      .filter((id: string) => id !== session.user.id)
+
+    const query = supabase
       .from('likes')
       .select('*, liker:profiles!likes_liker_id_fkey(*)', { count: 'exact' })
       .eq('liked_id', session.user.id)
       .eq('passed', false)
+      .order('created_at', { ascending: true })
+
+    const { data, count: total } = matchedIds.length > 0
+      ? await query.not('liker_id', 'in', `(${matchedIds.join(',')})`)
+      : await query
 
     if (data) setLikes(data)
     if (total) setCount(total)
     setLoading(false)
   }
 
-  return { likes, count, loading }
+  function nextLike() {
+    setCurrentIndex(prev => Math.min(prev + 1, likes.length - 1))
+  }
+
+  function prevLike() {
+    setCurrentIndex(prev => Math.max(prev - 1, 0))
+  }
+
+  const currentLike = likes[currentIndex] ?? null
+
+  return { likes, currentLike, currentIndex, count, loading, nextLike, prevLike }
 }
