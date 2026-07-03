@@ -68,7 +68,7 @@ export function MatchesScreen() {
               <View style={styles.empty}>
                 <Text style={styles.emptyIcon}>💬</Text>
                 <Text style={styles.emptyTitle}>No matches yet</Text>
-                <Text style={styles.emptySub}>Like someone to get started. When you match you can message each other here.</Text>
+                <Text style={styles.emptySub}>Like someone to get started.</Text>
               </View>
             )}
           </>
@@ -79,7 +79,9 @@ export function MatchesScreen() {
             onPress={() => navigation.navigate('Chat', { matchId: item.id, otherUser: item.other_user })}
             activeOpacity={0.7}
           >
-            <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={50} />
+            <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { profile: item.other_user })}>
+              <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={50} />
+            </TouchableOpacity>
             <View style={styles.convoInfo}>
               <View style={styles.convoTopRow}>
                 <Text style={styles.convoName}>{item.other_user?.first_name}</Text>
@@ -129,16 +131,23 @@ export function ChatScreen({ route }: any) {
 
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
-      {/* Header */}
+      {/* Tappable header to view profile */}
       <View style={styles.chatHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={38} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.chatName}>{otherUser.first_name}</Text>
-          {otherUser.job_title && <Text style={styles.chatSub}>{otherUser.job_title}</Text>}
-        </View>
+        <TouchableOpacity
+          style={styles.chatHeaderInfo}
+          onPress={() => navigation.navigate('ViewProfile', { profile: otherUser })}
+          activeOpacity={0.7}
+        >
+          <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={38} />
+          <View>
+            <Text style={styles.chatName}>{otherUser.first_name}</Text>
+            {otherUser.job_title && <Text style={styles.chatSub}>{otherUser.job_title}</Text>}
+          </View>
+          <Text style={styles.viewProfileHint}>View profile →</Text>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -167,11 +176,9 @@ export function ChatScreen({ route }: any) {
               const isMe = item.sender_id === myId
               const prevMsg = messages[index - 1]
               const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== item.sender_id)
-              const showName = showAvatar
 
               return (
                 <View style={[styles.msgRow, isMe ? styles.msgRowMe : styles.msgRowThem]}>
-                  {/* Their avatar */}
                   {!isMe && (
                     <View style={styles.msgAvatarWrap}>
                       {showAvatar
@@ -180,11 +187,7 @@ export function ChatScreen({ route }: any) {
                       }
                     </View>
                   )}
-
                   <View style={[styles.msgContent, isMe ? styles.msgContentMe : styles.msgContentThem]}>
-                    {showName && !isMe && (
-                      <Text style={styles.msgSenderName}>{otherUser.first_name}</Text>
-                    )}
                     <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
                       <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>
                         {item.content}
@@ -200,7 +203,6 @@ export function ChatScreen({ route }: any) {
           />
         )}
 
-        {/* Input */}
         <View style={styles.inputRow}>
           <TextInput
             style={styles.chatInput}
@@ -209,7 +211,6 @@ export function ChatScreen({ route }: any) {
             value={text}
             onChangeText={setText}
             multiline
-            onSubmitEditing={handleSend}
           />
           <TouchableOpacity
             style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
@@ -243,12 +244,13 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 36, marginBottom: 14 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: 8 },
   emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-  // Chat
   chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.lg, paddingVertical: 12, borderBottomWidth: 0.5, borderColor: Colors.border },
   backBtn: { padding: 4 },
   backArrow: { fontSize: 20, color: Colors.textSecondary },
+  chatHeaderInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   chatName: { fontSize: 15, fontWeight: '600', color: Colors.text },
   chatSub: { fontSize: 11, color: Colors.textSecondary },
+  viewProfileHint: { fontSize: 11, color: Colors.primary, marginLeft: 'auto' },
   emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
   emptyChatTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, textAlign: 'center' },
   emptyChatSub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
@@ -260,7 +262,6 @@ const styles = StyleSheet.create({
   msgContent: { maxWidth: '72%', gap: 2 },
   msgContentMe: { alignItems: 'flex-end' },
   msgContentThem: { alignItems: 'flex-start' },
-  msgSenderName: { fontSize: 11, color: Colors.textTertiary, marginLeft: 4, marginBottom: 2 },
   bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
   bubbleMe: { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
   bubbleThem: { backgroundColor: Colors.surface, borderBottomLeftRadius: 4, borderWidth: 0.5, borderColor: Colors.border },

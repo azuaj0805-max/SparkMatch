@@ -1,10 +1,12 @@
 import React from 'react'
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  Alert, Image, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLikesReceived } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
+import { usePhotoUpload } from '../../hooks/usePhotoUpload'
 import { Avatar } from '../../components/Avatar'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { SALARY_BADGE_LABELS, LOOKING_FOR_LABELS } from '../../types'
@@ -20,8 +22,7 @@ export function LikesScreen() {
           <Text style={styles.headerTitle}>Likes You</Text>
         </View>
         <View style={styles.centered}>
-          <Text style={styles.emptyIcon}>💫</Text>
-          <Text style={styles.emptyTitle}>Loading...</Text>
+          <ActivityIndicator color={Colors.primary} />
         </View>
       </SafeAreaView>
     )
@@ -38,7 +39,7 @@ export function LikesScreen() {
         <View style={styles.upgradeBanner}>
           <Text style={styles.upgradeTitle}>See who likes you</Text>
           <Text style={styles.upgradeSub}>
-            Upgrade to Premium to see all {count} people — including their salary and career details.
+            Upgrade to Premium to see all {count} people — including salary and career details.
           </Text>
           <TouchableOpacity style={[GlobalStyles.primaryButton, { width: '100%' }]}>
             <Text style={GlobalStyles.primaryButtonText}>Upgrade — $12/mo</Text>
@@ -54,10 +55,7 @@ export function LikesScreen() {
         </View>
       ) : (
         <View style={styles.queueWrap}>
-          <Text style={styles.queueLabel}>
-            {currentIndex + 1} of {count}
-          </Text>
-
+          <Text style={styles.queueLabel}>{currentIndex + 1} of {count}</Text>
           <View style={styles.likeTile}>
             <View style={[styles.likeTileInner, !PREMIUM && styles.blurred]}>
               <Avatar
@@ -87,7 +85,6 @@ export function LikesScreen() {
               )}
             </View>
           </View>
-
           <View style={styles.navRow}>
             <TouchableOpacity
               style={[styles.navBtn, currentIndex === 0 && styles.navBtnDisabled]}
@@ -112,10 +109,23 @@ export function LikesScreen() {
 
 export function ProfileScreen() {
   const { profile, signOut } = useAuth()
+  const { pickAndUploadPhoto, deletePhoto, uploading } = usePhotoUpload()
+
   if (!profile) return null
 
   const salaryLabel = profile.salary_range ? SALARY_BADGE_LABELS[profile.salary_range] : null
   const lookingForLabel = profile.looking_for ? LOOKING_FOR_LABELS[profile.looking_for] : null
+
+  async function handleAddPhoto() {
+    await pickAndUploadPhoto()
+  }
+
+  async function handleDeletePhoto(url: string) {
+    Alert.alert('Remove photo', 'Are you sure you want to remove this photo?', [
+      { text: 'Cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => deletePhoto(url) },
+    ])
+  }
 
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
@@ -123,6 +133,8 @@ export function ProfileScreen() {
         <Text style={styles.headerTitle}>Profile</Text>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScroll}>
+
+        {/* Hero */}
         <View style={styles.profileHero}>
           <Avatar name={profile.first_name} photo={profile.photos?.[0]} size={72} />
           <View style={{ flex: 1 }}>
@@ -130,6 +142,46 @@ export function ProfileScreen() {
             <Text style={styles.profileSub}>{profile.city}</Text>
           </View>
         </View>
+
+        {/* Photos */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Photos</Text>
+          <View style={styles.photoGrid}>
+            {(profile.photos ?? []).map((url, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.photoThumb}
+                onLongPress={() => handleDeletePhoto(url)}
+                activeOpacity={0.8}
+              >
+                <Image source={{ uri: url }} style={styles.photoThumbImg} resizeMode="cover" />
+                <TouchableOpacity
+                  style={styles.photoDelete}
+                  onPress={() => handleDeletePhoto(url)}
+                >
+                  <Text style={styles.photoDeleteText}>✕</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+            {(profile.photos ?? []).length < 6 && (
+              <TouchableOpacity
+                style={styles.photoAdd}
+                onPress={handleAddPhoto}
+                disabled={uploading}
+                activeOpacity={0.7}
+              >
+                {uploading
+                  ? <ActivityIndicator color={Colors.primary} />
+                  : <Text style={styles.photoAddIcon}>+</Text>
+                }
+                <Text style={styles.photoAddText}>Add photo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={styles.photoHint}>Long press a photo to remove it. Up to 6 photos.</Text>
+        </View>
+
+        {/* Career */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Career</Text>
           {profile.job_title && <InfoRow icon="💼" text={`${profile.job_title}${profile.company ? ` · ${profile.company}` : ''}`} />}
@@ -141,6 +193,8 @@ export function ProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* Dating preferences */}
         {lookingForLabel && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Dating preferences</Text>
@@ -149,6 +203,8 @@ export function ProfileScreen() {
             {profile.orientation?.length > 0 && profile.show_orientation && <InfoRow icon="🌈" text={profile.orientation.join(', ')} />}
           </View>
         )}
+
+        {/* Work style */}
         {profile.work_style?.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Work style</Text>
@@ -161,6 +217,8 @@ export function ProfileScreen() {
             </View>
           </View>
         )}
+
+        {/* Prompts */}
         {profile.prompts?.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Prompts</Text>
@@ -172,9 +230,7 @@ export function ProfileScreen() {
             ))}
           </View>
         )}
-        <TouchableOpacity style={[GlobalStyles.primaryButton, { marginBottom: 12 }]}>
-          <Text style={GlobalStyles.primaryButtonText}>Edit profile</Text>
-        </TouchableOpacity>
+
         <TouchableOpacity
           style={[GlobalStyles.secondaryButton, { marginBottom: 40 }]}
           onPress={() => Alert.alert('Sign out', 'Are you sure?', [
@@ -231,6 +287,15 @@ const styles = StyleSheet.create({
   profileSub: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
   card: { backgroundColor: Colors.background, borderRadius: Radius.lg, borderWidth: 0.5, borderColor: Colors.border, padding: Spacing.lg },
   cardTitle: { fontSize: 11, fontWeight: '600', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  photoThumb: { width: 90, height: 120, borderRadius: Radius.md, overflow: 'hidden', position: 'relative' },
+  photoThumbImg: { width: '100%', height: '100%' },
+  photoDelete: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
+  photoDeleteText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  photoAdd: { width: 90, height: 120, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  photoAddIcon: { fontSize: 24, color: Colors.textTertiary },
+  photoAddText: { fontSize: 11, color: Colors.textTertiary },
+  photoHint: { fontSize: 11, color: Colors.textTertiary, marginTop: 4 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
   infoIcon: { fontSize: 15 },
   infoText: { fontSize: 14, color: Colors.text, flex: 1 },
