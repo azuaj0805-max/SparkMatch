@@ -10,13 +10,15 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 })
 
 export function useNotifications() {
   const { session } = useAuth()
-  const notificationListener = useRef<any>()
-  const responseListener = useRef<any>()
+  const notificationListener = useRef<any>(null)
+  const responseListener = useRef<any>(null)
 
   useEffect(() => {
     if (!session) return
@@ -31,8 +33,8 @@ export function useNotifications() {
     })
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener.current)
-      Notifications.removeNotificationSubscription(responseListener.current)
+      notificationListener.current?.remove()
+      responseListener.current?.remove()
     }
   }, [session])
 
@@ -49,23 +51,27 @@ export function useNotifications() {
 
     if (finalStatus !== 'granted') return
 
-    const token = (await Notifications.getExpoPushTokenAsync()).data
+    try {
+      const tokenData = await Notifications.getExpoPushTokenAsync()
+      const token = tokenData.data
 
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#D85A30',
-      })
-    }
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#D85A30',
+        })
+      }
 
-    // Save token to profile
-    if (session && token) {
-      await supabase
-        .from('profiles')
-        .update({ push_token: token })
-        .eq('id', session.user.id)
+      if (session && token) {
+        await supabase
+          .from('profiles')
+          .update({ push_token: token })
+          .eq('id', session.user.id)
+      }
+    } catch (e) {
+      console.log('Push token error:', e)
     }
   }
 }

@@ -140,6 +140,7 @@ export function ProfileScreen() {
           text: 'Delete permanently',
           style: 'destructive',
           onPress: async () => {
+            if (!profile) return;
             await supabase.from('messages').delete().eq('sender_id', profile.id)
             await supabase.from('likes').delete().eq('liker_id', profile.id)
             await supabase.from('matches').delete().or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
