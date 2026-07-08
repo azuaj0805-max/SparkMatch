@@ -4,12 +4,14 @@ import {
   Alert, Image, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
 import { useLikesReceived } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
 import { usePhotoUpload } from '../../hooks/usePhotoUpload'
 import { Avatar } from '../../components/Avatar'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { SALARY_BADGE_LABELS, LOOKING_FOR_LABELS } from '../../types'
+import { supabase } from '../../lib/supabase'
 
 export function LikesScreen() {
   const { currentLike, currentIndex, count, loading, nextLike, prevLike } = useLikesReceived()
@@ -108,8 +110,9 @@ export function LikesScreen() {
 }
 
 export function ProfileScreen() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, refreshProfile } = useAuth()
   const { pickAndUploadPhoto, deletePhoto, uploading } = usePhotoUpload()
+  const navigation = useNavigation<any>()
 
   if (!profile) return null
 
@@ -121,16 +124,48 @@ export function ProfileScreen() {
   }
 
   async function handleDeletePhoto(url: string) {
-    Alert.alert('Remove photo', 'Are you sure you want to remove this photo?', [
+    Alert.alert('Remove photo', 'Are you sure?', [
       { text: 'Cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => deletePhoto(url) },
     ])
+  }
+
+  async function handleDeleteAccount() {
+    Alert.alert(
+      'Delete account',
+      'This will permanently delete your profile, matches, and messages. This cannot be undone.',
+      [
+        { text: 'Cancel' },
+        {
+          text: 'Delete permanently',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase.from('messages').delete().eq('sender_id', profile.id)
+            await supabase.from('likes').delete().eq('liker_id', profile.id)
+            await supabase.from('matches').delete().or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
+            await supabase.from('profiles').delete().eq('id', profile.id)
+            await supabase.auth.signOut()
+          }
+        }
+      ]
+    )
+  }
+
+  function handleBlockReport() {
+    Alert.alert(
+      'Block or report',
+      'To block or report someone, go to their profile from your matches or conversations and use the options menu.',
+      [{ text: 'OK' }]
+    )
   }
 
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('EditProfile')}>
+          <Text style={styles.editLink}>Edit</Text>
+        </TouchableOpacity>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScroll}>
 
@@ -155,10 +190,7 @@ export function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <Image source={{ uri: url }} style={styles.photoThumbImg} resizeMode="cover" />
-                <TouchableOpacity
-                  style={styles.photoDelete}
-                  onPress={() => handleDeletePhoto(url)}
-                >
+                <TouchableOpacity style={styles.photoDelete} onPress={() => handleDeletePhoto(url)}>
                   <Text style={styles.photoDeleteText}>✕</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
@@ -178,7 +210,7 @@ export function ProfileScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <Text style={styles.photoHint}>Long press a photo to remove it. Up to 6 photos.</Text>
+          <Text style={styles.photoHint}>Tap ✕ to remove a photo. Up to 6 photos.</Text>
         </View>
 
         {/* Career */}
@@ -231,15 +263,37 @@ export function ProfileScreen() {
           </View>
         )}
 
-        <TouchableOpacity
-          style={[GlobalStyles.secondaryButton, { marginBottom: 40 }]}
-          onPress={() => Alert.alert('Sign out', 'Are you sure?', [
-            { text: 'Cancel' },
-            { text: 'Sign out', style: 'destructive', onPress: signOut },
-          ])}
-        >
-          <Text style={GlobalStyles.secondaryButtonText}>Sign out</Text>
-        </TouchableOpacity>
+        {/* Account actions */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Account</Text>
+          <TouchableOpacity
+            style={styles.accountRow}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
+            <Text style={styles.accountRowText}>✏️  Edit profile</Text>
+            <Text style={styles.accountRowArrow}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.accountRow} onPress={handleBlockReport}>
+            <Text style={styles.accountRowText}>🚫  Block or report someone</Text>
+            <Text style={styles.accountRowArrow}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.accountRow}
+            onPress={() => Alert.alert('Sign out', 'Are you sure?', [
+              { text: 'Cancel' },
+              { text: 'Sign out', style: 'destructive', onPress: signOut },
+            ])}
+          >
+            <Text style={styles.accountRowText}>🚪  Sign out</Text>
+            <Text style={styles.accountRowArrow}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.accountRow, { borderBottomWidth: 0 }]} onPress={handleDeleteAccount}>
+            <Text style={[styles.accountRowText, { color: Colors.danger }]}>🗑️  Delete account</Text>
+            <Text style={styles.accountRowArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   )
@@ -258,6 +312,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 0.5, borderColor: Colors.border },
   headerTitle: { fontSize: 22, fontWeight: '600', color: Colors.text },
   headerCount: { fontSize: 13, color: Colors.textSecondary },
+  editLink: { fontSize: 15, fontWeight: '600', color: Colors.primary },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIcon: { fontSize: 40, marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: 8 },
@@ -308,4 +363,7 @@ const styles = StyleSheet.create({
   promptBox: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: 11 },
   promptLabel: { fontSize: 10, fontWeight: '600', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
   promptAnswer: { fontSize: 13, color: Colors.text, lineHeight: 19 },
+  accountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13, borderBottomWidth: 0.5, borderColor: Colors.border },
+  accountRowText: { fontSize: 14, color: Colors.text },
+  accountRowArrow: { fontSize: 16, color: Colors.textTertiary },
 })

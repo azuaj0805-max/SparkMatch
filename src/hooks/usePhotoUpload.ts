@@ -9,31 +9,38 @@ export function usePhotoUpload() {
 
   async function pickAndUploadPhoto(): Promise<string | null> {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!permission.granted) {
-      return null
-    }
+    if (!permission.granted) return null
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [3, 4],
-      quality: 0.8,
+      quality: 0.7,
+      base64: true,
     })
 
     if (result.canceled) return null
-
     const asset = result.assets[0]
-    if (!asset) return null
+    if (!asset || !asset.base64) return null
 
     setUploading(true)
     try {
       const fileName = `${session?.user.id}/${Date.now()}.jpg`
-      const response = await fetch(asset.uri)
-      const blob = await response.blob()
+
+      const base64 = asset.base64
+      const byteCharacters = atob(base64)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
 
       const { error: uploadError } = await supabase.storage
-        .from('photos')
-        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true })
+        .from('Photos')
+        .upload(fileName, byteArray, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        })
 
       if (uploadError) {
         console.error('Upload error:', uploadError)
@@ -41,17 +48,16 @@ export function usePhotoUpload() {
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('photos')
+        .from('Photos')
         .getPublicUrl(fileName)
 
-      // Update profile photos array
-      const { data: profile } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('photos')
         .eq('id', session?.user.id)
         .single()
 
-      const existingPhotos = profile?.photos ?? []
+      const existingPhotos = profileData?.photos ?? []
       await supabase
         .from('profiles')
         .update({ photos: [...existingPhotos, publicUrl] })
@@ -66,13 +72,13 @@ export function usePhotoUpload() {
 
   async function deletePhoto(url: string) {
     if (!session) return
-    const { data: profile } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('photos')
       .eq('id', session.user.id)
       .single()
 
-    const updated = (profile?.photos ?? []).filter((p: string) => p !== url)
+    const updated = (profileData?.photos ?? []).filter((p: string) => p !== url)
     await supabase
       .from('profiles')
       .update({ photos: updated })

@@ -10,6 +10,7 @@ import { DiscoverScreen } from './screens/main/DiscoverScreen'
 import { MatchesScreen, ChatScreen } from './screens/main/MatchesScreen'
 import { LikesScreen, ProfileScreen } from './screens/main/ProfileScreen'
 import { ViewProfileScreen } from './screens/main/ViewProfileScreen'
+import { EditProfileScreen } from './screens/main/EditProfileScreen'
 import { Colors } from './lib/styles'
 
 const Stack = createNativeStackNavigator()
@@ -71,6 +72,7 @@ function RootNavigator() {
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="ViewProfile" component={ViewProfileScreen} />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         </>
       )}
     </Stack.Navigator>
