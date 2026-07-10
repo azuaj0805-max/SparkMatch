@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { AuthScreen } from './screens/auth/AuthScreen'
 import { OnboardingScreen } from './screens/onboarding/OnboardingScreen'
@@ -32,31 +34,39 @@ function MainTabs() {
 
 function CustomTabBar({ state, navigation }: any) {
   const tabs = [
-    { name: 'Discover', icon: '◈', label: 'Discover' },
-    { name: 'Likes',    icon: '♡', label: 'Likes' },
-    { name: 'Matches',  icon: '◉', label: 'Matches' },
-    { name: 'Profile',  icon: '◎', label: 'Profile' },
+    { name: 'Discover', icon: 'compass-outline',     iconActive: 'compass',          label: 'Discover' },
+    { name: 'Likes',    icon: 'heart-outline',        iconActive: 'heart',            label: 'Likes' },
+    { name: 'Matches',  icon: 'chatbubble-outline',   iconActive: 'chatbubble',       label: 'Matches' },
+    { name: 'Profile',  icon: 'person-outline',       iconActive: 'person',           label: 'Profile' },
   ]
+
   return (
     <View style={tabStyles.bar}>
-      <View style={tabStyles.inner}>
-        {tabs.map((tab, i) => {
-          const focused = state.index === i
-          return (
-            <TouchableOpacity
-              key={tab.name}
-              style={tabStyles.tabBtn}
-              onPress={() => navigation.navigate(tab.name)}
-              activeOpacity={0.7}
-            >
-              <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
-                <Text style={[tabStyles.icon, focused && tabStyles.iconActive]}>{tab.icon}</Text>
-              </View>
-              <Text style={[tabStyles.label, focused && tabStyles.labelActive]}>{tab.label}</Text>
-            </TouchableOpacity>
-          )
-        })}
-      </View>
+      {tabs.map((tab, i) => {
+        const focused = state.index === i
+        return (
+          <TouchableOpacity
+            key={tab.name}
+            style={tabStyles.tabBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              navigation.navigate(tab.name)
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
+              <Ionicons
+                name={focused ? tab.iconActive : tab.icon as any}
+                size={24}
+                color={focused ? Colors.primary : Colors.textTertiary}
+              />
+            </View>
+            <Text style={[tabStyles.label, focused && tabStyles.labelActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        )
+      })}
     </View>
   )
 }
@@ -100,10 +110,8 @@ const tabStyles = StyleSheet.create({
     borderColor: Colors.border,
     paddingBottom: 20,
     paddingTop: 8,
-  },
-  inner: {
-    flexDirection: 'row',
     paddingHorizontal: 8,
+    flexDirection: 'row',
   },
   tabBtn: {
     flex: 1,
@@ -111,20 +119,13 @@ const tabStyles = StyleSheet.create({
     gap: 3,
   },
   iconWrap: {
-    width: 40, height: 32,
+    width: 44, height: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 17,
   },
   iconWrapActive: {
     backgroundColor: Colors.primaryLight,
-  },
-  icon: {
-    fontSize: 20,
-    color: Colors.textTertiary,
-  },
-  iconActive: {
-    color: Colors.primary,
   },
   label: {
     fontSize: 10,
@@ -133,6 +134,6 @@ const tabStyles = StyleSheet.create({
   },
   labelActive: {
     color: Colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 })

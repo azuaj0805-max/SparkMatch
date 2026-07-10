@@ -5,6 +5,8 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { useMatches, useMessages } from '../../hooks/useMatches'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../../components/Avatar'
@@ -21,7 +23,7 @@ export function MatchesScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[GlobalStyles.safeArea, { alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={Colors.primary} size="large" />
       </SafeAreaView>
     )
   }
@@ -52,7 +54,10 @@ export function MatchesScreen() {
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.newMatchItem}
-                      onPress={() => navigation.navigate('Chat', { matchId: item.id, otherUser: item.other_user })}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                        navigation.navigate('Chat', { matchId: item.id, otherUser: item.other_user })
+                      }}
                     >
                       <View style={styles.newMatchAvatarWrap}>
                         <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={56} />
@@ -71,7 +76,9 @@ export function MatchesScreen() {
             )}
             {newMatches.length === 0 && conversations.length === 0 && (
               <View style={styles.empty}>
-                <Text style={styles.emptyIcon}>◉</Text>
+                <View style={styles.emptyIconWrap}>
+                  <Ionicons name="chatbubble-outline" size={36} color={Colors.primary} />
+                </View>
                 <Text style={styles.emptyTitle}>No matches yet</Text>
                 <Text style={styles.emptySub}>Like someone to get started. When you match, you can message each other here.</Text>
               </View>
@@ -81,7 +88,10 @@ export function MatchesScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.convoRow}
-            onPress={() => navigation.navigate('Chat', { matchId: item.id, otherUser: item.other_user })}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              navigation.navigate('Chat', { matchId: item.id, otherUser: item.other_user })
+            }}
             activeOpacity={0.7}
           >
             <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { profile: item.other_user })}>
@@ -96,6 +106,7 @@ export function MatchesScreen() {
               </View>
               <Text style={styles.convoPreview} numberOfLines={1}>{item.last_message}</Text>
             </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.borderDark} />
           </TouchableOpacity>
         )}
       />
@@ -128,6 +139,7 @@ export function ChatScreen({ route }: any) {
   async function handleSend() {
     const msg = text.trim()
     if (!msg) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     setText('')
     await sendMessage(msg)
   }
@@ -137,8 +149,14 @@ export function ChatScreen({ route }: any) {
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.chatHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>←</Text>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+            navigation.goBack()
+          }}
+          style={styles.backBtn}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.chatHeaderInfo}
@@ -150,18 +168,25 @@ export function ChatScreen({ route }: any) {
             <Text style={styles.chatName}>{otherUser.first_name}</Text>
             {otherUser.job_title && <Text style={styles.chatSub}>{otherUser.job_title}</Text>}
           </View>
-          <Text style={styles.viewProfile}>Profile →</Text>
+          <View style={styles.viewProfileBtn}>
+            <Text style={styles.viewProfileText}>Profile</Text>
+            <Ionicons name="chevron-forward" size={13} color={Colors.primary} />
+          </View>
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={90}
+      >
         {loading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color={Colors.primary} />
           </View>
         ) : messages.length === 0 ? (
           <View style={styles.emptyChat}>
-            <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={72} />
+            <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={80} />
             <Text style={styles.emptyChatTitle}>You matched with {otherUser.first_name}</Text>
             <Text style={styles.emptyChatSub}>Start the conversation — say something thoughtful.</Text>
           </View>
@@ -175,25 +200,43 @@ export function ChatScreen({ route }: any) {
             renderItem={({ item, index }) => {
               const isMe = item.sender_id === myId
               const prevMsg = messages[index - 1]
-              const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== item.sender_id)
+              const nextMsg = messages[index + 1]
+              const showAvatar = !isMe && (!nextMsg || nextMsg.sender_id !== item.sender_id)
+              const isFirst = !prevMsg || prevMsg.sender_id !== item.sender_id
+              const isLast = !nextMsg || nextMsg.sender_id !== item.sender_id
 
               return (
-                <View style={[styles.msgRow, isMe ? styles.msgRowMe : styles.msgRowThem]}>
+                <View style={[
+                  styles.msgRow,
+                  isMe ? styles.msgRowMe : styles.msgRowThem,
+                  { marginBottom: isLast ? 8 : 2 }
+                ]}>
                   {!isMe && (
                     <View style={styles.msgAvatarWrap}>
                       {showAvatar
-                        ? <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={28} />
-                        : <View style={{ width: 28 }} />
+                        ? <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={30} />
+                        : <View style={{ width: 30 }} />
                       }
                     </View>
                   )}
                   <View style={[styles.msgContent, isMe ? styles.msgContentMe : styles.msgContentThem]}>
-                    <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-                      <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>{item.content}</Text>
+                    <View style={[
+                      styles.bubble,
+                      isMe ? styles.bubbleMe : styles.bubbleThem,
+                      isMe && isFirst && { borderTopRightRadius: 18 },
+                      isMe && isLast && { borderBottomRightRadius: 4 },
+                      !isMe && isFirst && { borderTopLeftRadius: 18 },
+                      !isMe && isLast && { borderBottomLeftRadius: 4 },
+                    ]}>
+                      <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>
+                        {item.content}
+                      </Text>
                     </View>
-                    <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>
-                      {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
+                    {isLast && (
+                      <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>
+                        {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    )}
                   </View>
                 </View>
               )
@@ -216,7 +259,7 @@ export function ChatScreen({ route }: any) {
             activeOpacity={0.8}
             disabled={!text.trim()}
           >
-            <Text style={{ color: '#fff', fontSize: 16 }}>↑</Text>
+            <Ionicons name="arrow-up" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -233,7 +276,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 11, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14, paddingHorizontal: Spacing.xl },
   newMatchItem: { alignItems: 'center', gap: 6, width: 64 },
   newMatchAvatarWrap: { position: 'relative' },
-  newMatchDot: { position: 'absolute', bottom: 2, right: 2, width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary, borderWidth: 2, borderColor: Colors.background },
+  newMatchDot: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary, borderWidth: 2, borderColor: Colors.background },
   newMatchName: { fontSize: 11, color: Colors.textSecondary, textAlign: 'center', fontWeight: '500' },
   convoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   convoInfo: { flex: 1 },
@@ -242,36 +285,36 @@ const styles = StyleSheet.create({
   convoPreview: { fontSize: 13, color: Colors.textSecondary },
   convoTime: { fontSize: 11, color: Colors.textTertiary },
   empty: { padding: 40, alignItems: 'center', paddingTop: 60 },
-  emptyIcon: { fontSize: 40, color: Colors.primary, marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 8 },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 8, letterSpacing: -0.3 },
   emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: Spacing.lg, paddingVertical: 12, borderBottomWidth: 1, borderColor: Colors.border },
   backBtn: { padding: 4 },
-  backArrow: { fontSize: 20, color: Colors.textSecondary },
   chatHeaderInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  chatName: { fontSize: 15, fontWeight: '600', color: Colors.text },
-  chatSub: { fontSize: 11, color: Colors.textSecondary },
-  viewProfile: { fontSize: 12, color: Colors.primary, fontWeight: '500' },
-  emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-  emptyChatTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, textAlign: 'center', letterSpacing: -0.3 },
+  chatName: { fontSize: 15, fontWeight: '700', color: Colors.text },
+  chatSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+  viewProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  viewProfileText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
+  emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 14 },
+  emptyChatTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, textAlign: 'center', letterSpacing: -0.3 },
   emptyChatSub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-  messageList: { padding: Spacing.lg, paddingBottom: Spacing.xl, gap: 2 },
-  msgRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 4, gap: 6 },
+  messageList: { padding: Spacing.lg, paddingBottom: Spacing.xl },
+  msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   msgRowMe: { justifyContent: 'flex-end' },
   msgRowThem: { justifyContent: 'flex-start' },
   msgAvatarWrap: { marginBottom: 4 },
   msgContent: { maxWidth: '72%', gap: 2 },
   msgContentMe: { alignItems: 'flex-end' },
   msgContentThem: { alignItems: 'flex-start' },
-  bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
-  bubbleMe: { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
-  bubbleThem: { backgroundColor: Colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: Colors.border },
+  bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 4 },
+  bubbleMe: { backgroundColor: Colors.primary },
+  bubbleThem: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   bubbleText: { fontSize: 15, color: Colors.text, lineHeight: 21 },
   bubbleTextMe: { color: '#fff' },
-  msgTime: { fontSize: 10, color: Colors.textTertiary, marginLeft: 4 },
+  msgTime: { fontSize: 10, color: Colors.textTertiary, marginLeft: 4, marginTop: 2 },
   msgTimeMe: { marginRight: 4 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: Spacing.md, paddingBottom: Spacing.lg, borderTopWidth: 1, borderColor: Colors.border },
-  chatInput: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: Colors.text, maxHeight: 100, backgroundColor: Colors.surface },
-  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  chatInput: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, fontSize: 15, color: Colors.text, maxHeight: 100, backgroundColor: Colors.surface },
+  sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { backgroundColor: Colors.borderDark },
 })
