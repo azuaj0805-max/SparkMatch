@@ -29,8 +29,10 @@ export function MatchesScreen() {
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
+        <Text style={styles.headerEyebrow}>Meridian</Text>
         <Text style={styles.headerTitle}>Matches</Text>
       </View>
+
       <FlatList
         data={conversations}
         keyExtractor={m => m.id}
@@ -46,13 +48,16 @@ export function MatchesScreen() {
                   data={newMatches}
                   keyExtractor={m => m.id}
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: Spacing.xl, gap: 14 }}
+                  contentContainerStyle={{ paddingHorizontal: Spacing.xl, gap: 16 }}
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.newMatchItem}
                       onPress={() => navigation.navigate('Chat', { matchId: item.id, otherUser: item.other_user })}
                     >
-                      <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={54} bordered />
+                      <View style={styles.newMatchAvatarWrap}>
+                        <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={56} />
+                        <View style={styles.newMatchDot} />
+                      </View>
                       <Text style={styles.newMatchName} numberOfLines={1}>{item.other_user?.first_name}</Text>
                     </TouchableOpacity>
                   )}
@@ -66,9 +71,9 @@ export function MatchesScreen() {
             )}
             {newMatches.length === 0 && conversations.length === 0 && (
               <View style={styles.empty}>
-                <Text style={styles.emptyIcon}>💬</Text>
+                <Text style={styles.emptyIcon}>◉</Text>
                 <Text style={styles.emptyTitle}>No matches yet</Text>
-                <Text style={styles.emptySub}>Like someone to get started.</Text>
+                <Text style={styles.emptySub}>Like someone to get started. When you match, you can message each other here.</Text>
               </View>
             )}
           </>
@@ -80,7 +85,7 @@ export function MatchesScreen() {
             activeOpacity={0.7}
           >
             <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { profile: item.other_user })}>
-              <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={50} />
+              <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={52} />
             </TouchableOpacity>
             <View style={styles.convoInfo}>
               <View style={styles.convoTopRow}>
@@ -131,7 +136,6 @@ export function ChatScreen({ route }: any) {
 
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
-      {/* Tappable header to view profile */}
       <View style={styles.chatHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backArrow}>←</Text>
@@ -142,19 +146,15 @@ export function ChatScreen({ route }: any) {
           activeOpacity={0.7}
         >
           <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={38} />
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.chatName}>{otherUser.first_name}</Text>
             {otherUser.job_title && <Text style={styles.chatSub}>{otherUser.job_title}</Text>}
           </View>
-          <Text style={styles.viewProfileHint}>View profile →</Text>
+          <Text style={styles.viewProfile}>Profile →</Text>
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
-      >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
         {loading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color={Colors.primary} />
@@ -162,8 +162,8 @@ export function ChatScreen({ route }: any) {
         ) : messages.length === 0 ? (
           <View style={styles.emptyChat}>
             <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={72} />
-            <Text style={styles.emptyChatTitle}>You matched with {otherUser.first_name}!</Text>
-            <Text style={styles.emptyChatSub}>Send a message to get the conversation started.</Text>
+            <Text style={styles.emptyChatTitle}>You matched with {otherUser.first_name}</Text>
+            <Text style={styles.emptyChatSub}>Start the conversation — say something thoughtful.</Text>
           </View>
         ) : (
           <FlatList
@@ -189,9 +189,7 @@ export function ChatScreen({ route }: any) {
                   )}
                   <View style={[styles.msgContent, isMe ? styles.msgContentMe : styles.msgContentThem]}>
                     <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-                      <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>
-                        {item.content}
-                      </Text>
+                      <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>{item.content}</Text>
                     </View>
                     <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>
                       {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -227,32 +225,35 @@ export function ChatScreen({ route }: any) {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 0.5, borderColor: Colors.border },
-  headerTitle: { fontSize: 22, fontWeight: '600', color: Colors.text },
+  header: { paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
+  headerEyebrow: { fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
   section: { paddingTop: Spacing.xl, paddingBottom: Spacing.md },
   sectionHeader: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
-  sectionTitle: { fontSize: 11, fontWeight: '600', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12, paddingHorizontal: Spacing.xl },
-  newMatchItem: { alignItems: 'center', gap: 6, width: 60 },
-  newMatchName: { fontSize: 11, color: Colors.textSecondary, textAlign: 'center' },
-  convoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.xl, paddingVertical: 12 },
+  sectionTitle: { fontSize: 11, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14, paddingHorizontal: Spacing.xl },
+  newMatchItem: { alignItems: 'center', gap: 6, width: 64 },
+  newMatchAvatarWrap: { position: 'relative' },
+  newMatchDot: { position: 'absolute', bottom: 2, right: 2, width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary, borderWidth: 2, borderColor: Colors.background },
+  newMatchName: { fontSize: 11, color: Colors.textSecondary, textAlign: 'center', fontWeight: '500' },
+  convoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   convoInfo: { flex: 1 },
   convoTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
   convoName: { fontSize: 15, fontWeight: '600', color: Colors.text },
   convoPreview: { fontSize: 13, color: Colors.textSecondary },
   convoTime: { fontSize: 11, color: Colors.textTertiary },
-  empty: { padding: 40, alignItems: 'center' },
-  emptyIcon: { fontSize: 36, marginBottom: 14 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: 8 },
+  empty: { padding: 40, alignItems: 'center', paddingTop: 60 },
+  emptyIcon: { fontSize: 40, color: Colors.primary, marginBottom: 16 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 8 },
   emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-  chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.lg, paddingVertical: 12, borderBottomWidth: 0.5, borderColor: Colors.border },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: Spacing.lg, paddingVertical: 12, borderBottomWidth: 1, borderColor: Colors.border },
   backBtn: { padding: 4 },
   backArrow: { fontSize: 20, color: Colors.textSecondary },
   chatHeaderInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   chatName: { fontSize: 15, fontWeight: '600', color: Colors.text },
   chatSub: { fontSize: 11, color: Colors.textSecondary },
-  viewProfileHint: { fontSize: 11, color: Colors.primary, marginLeft: 'auto' },
+  viewProfile: { fontSize: 12, color: Colors.primary, fontWeight: '500' },
   emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-  emptyChatTitle: { fontSize: 18, fontWeight: '600', color: Colors.text, textAlign: 'center' },
+  emptyChatTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, textAlign: 'center', letterSpacing: -0.3 },
   emptyChatSub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   messageList: { padding: Spacing.lg, paddingBottom: Spacing.xl, gap: 2 },
   msgRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 4, gap: 6 },
@@ -264,13 +265,13 @@ const styles = StyleSheet.create({
   msgContentThem: { alignItems: 'flex-start' },
   bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
   bubbleMe: { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
-  bubbleThem: { backgroundColor: Colors.surface, borderBottomLeftRadius: 4, borderWidth: 0.5, borderColor: Colors.border },
+  bubbleThem: { backgroundColor: Colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: Colors.border },
   bubbleText: { fontSize: 15, color: Colors.text, lineHeight: 21 },
   bubbleTextMe: { color: '#fff' },
   msgTime: { fontSize: 10, color: Colors.textTertiary, marginLeft: 4 },
   msgTimeMe: { marginRight: 4 },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: Spacing.md, paddingBottom: Spacing.lg, borderTopWidth: 0.5, borderColor: Colors.border },
-  chatInput: { flex: 1, borderWidth: 0.5, borderColor: Colors.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: Colors.text, maxHeight: 100, backgroundColor: Colors.surface },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: Spacing.md, paddingBottom: Spacing.lg, borderTopWidth: 1, borderColor: Colors.border },
+  chatInput: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: Colors.text, maxHeight: 100, backgroundColor: Colors.surface },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { backgroundColor: Colors.borderDark },
 })

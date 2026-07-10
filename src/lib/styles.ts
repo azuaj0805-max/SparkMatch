@@ -1,31 +1,41 @@
 import { StyleSheet } from 'react-native'
 
 export const Colors = {
-  primary:       '#D85A30',
-  primaryLight:  '#FAECE7',
-  primaryDark:   '#993C1D',
-  green:         '#3B6D11',
-  greenLight:    '#EAF3DE',
-  greenBorder:   '#C0DD97',
-  blue:          '#185FA5',
-  blueLight:     '#E6F1FB',
-  teal:          '#0F6E56',
-  tealLight:     '#E1F5EE',
+  // Brand
+  primary:       '#6E8CFF',
+  primaryLight:  '#EEF1FF',
+  primaryDark:   '#4A6AE8',
+
+  // Dark navy
+  navy:          '#101E3B',
+  navyLight:     '#1C2D52',
+
+  // Supporting
+  green:         '#2D7A5F',
+  greenLight:    '#E0F2EA',
+  greenBorder:   '#A8D4BC',
+  blue:          '#3A6EA8',
+  blueLight:     '#E0EAF5',
   purple:        '#534AB7',
   purpleLight:   '#EEEDFE',
   amber:         '#854F0B',
   amberLight:    '#FAEEDA',
   pink:          '#993556',
   pinkLight:     '#FBEAF0',
-  text:          '#1A1A1A',
-  textSecondary: '#6B6B6B',
-  textTertiary:  '#9B9B9B',
-  border:        '#E5E5E5',
-  borderDark:    '#CCCCCC',
-  surface:       '#F7F7F5',
+
+  // Neutrals
+  text:          '#101E3B',
+  textSecondary: '#4A5568',
+  textTertiary:  '#8896AB',
+  border:        '#E8ECF4',
+  borderDark:    '#C8D0E0',
+  surface:       '#F4F6FF',
+  surfaceAlt:    '#F8F9FC',
   background:    '#FFFFFF',
-  danger:        '#A32D2D',
-  dangerLight:   '#FCEBEB',
+
+  // Status
+  danger:        '#E53E3E',
+  dangerLight:   '#FFF5F5',
 }
 
 export const Spacing = {
@@ -33,7 +43,7 @@ export const Spacing = {
 }
 
 export const Radius = {
-  sm: 8, md: 12, lg: 16, xl: 20, full: 999,
+  sm: 6, md: 10, lg: 14, xl: 20, xxl: 28, full: 999,
 }
 
 export const GlobalStyles = StyleSheet.create({
@@ -44,27 +54,36 @@ export const GlobalStyles = StyleSheet.create({
   primaryButton: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.full,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
   secondaryButton: {
     backgroundColor: Colors.background,
     borderRadius: Radius.full,
-    paddingVertical: 13,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 0.5,
-    borderColor: Colors.borderDark,
-  },
-  secondaryButtonText: { color: Colors.text, fontSize: 15, fontWeight: '500' },
-  input: {
-    borderWidth: 0.5,
+    borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.md,
+  },
+  secondaryButtonText: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: 13,
+    paddingVertical: 14,
     fontSize: 15,
     color: Colors.text,
     backgroundColor: Colors.background,

@@ -1,36 +1,26 @@
 {
   "expo": {
-    "name": "SparkMatch",
-    "slug": "sparkmatch",
+    "name": "Meridian",
+    "slug": "meridian",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#101E3B"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.sparkmatch.app",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+      "supportsTablet": false,
+      "bundleIdentifier": "com.meridian.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#101E3B"
       },
-      "package": "com.sparkmatch.app",
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "package": "com.meridian.app"
     },
     "plugins": [
-      "expo-image-picker"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "33375315-cf99-4661-8f37-cea44df6e2a1"
-      }
-    }
+      "expo-image-picker",
+      "expo-notifications"
+    ]
   }
 }

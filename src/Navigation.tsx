@@ -32,27 +32,31 @@ function MainTabs() {
 
 function CustomTabBar({ state, navigation }: any) {
   const tabs = [
-    { name: 'Discover', icon: '🔥', label: 'Discover' },
-    { name: 'Likes',    icon: '♥',  label: 'Likes' },
-    { name: 'Matches',  icon: '💬', label: 'Matches' },
-    { name: 'Profile',  icon: '👤', label: 'Profile' },
+    { name: 'Discover', icon: '◈', label: 'Discover' },
+    { name: 'Likes',    icon: '♡', label: 'Likes' },
+    { name: 'Matches',  icon: '◉', label: 'Matches' },
+    { name: 'Profile',  icon: '◎', label: 'Profile' },
   ]
   return (
     <View style={tabStyles.bar}>
-      {tabs.map((tab, i) => {
-        const focused = state.index === i
-        return (
-          <TouchableOpacity
-            key={tab.name}
-            style={tabStyles.tabBtn}
-            onPress={() => navigation.navigate(tab.name)}
-            activeOpacity={0.7}
-          >
-            <Text style={[tabStyles.icon, focused && tabStyles.iconActive]}>{tab.icon}</Text>
-            <Text style={[tabStyles.label, focused && tabStyles.labelActive]}>{tab.label}</Text>
-          </TouchableOpacity>
-        )
-      })}
+      <View style={tabStyles.inner}>
+        {tabs.map((tab, i) => {
+          const focused = state.index === i
+          return (
+            <TouchableOpacity
+              key={tab.name}
+              style={tabStyles.tabBtn}
+              onPress={() => navigation.navigate(tab.name)}
+              activeOpacity={0.7}
+            >
+              <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
+                <Text style={[tabStyles.icon, focused && tabStyles.iconActive]}>{tab.icon}</Text>
+              </View>
+              <Text style={[tabStyles.label, focused && tabStyles.labelActive]}>{tab.label}</Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
     </View>
   )
 }
@@ -91,16 +95,44 @@ export default function Navigation() {
 
 const tabStyles = StyleSheet.create({
   bar: {
-    flexDirection: 'row',
-    borderTopWidth: 0.5,
-    borderColor: Colors.border,
     backgroundColor: Colors.background,
-    paddingTop: 10,
-    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderColor: Colors.border,
+    paddingBottom: 20,
+    paddingTop: 8,
   },
-  tabBtn: { flex: 1, alignItems: 'center', gap: 3 },
-  icon: { fontSize: 22, opacity: 0.4 },
-  iconActive: { opacity: 1 },
-  label: { fontSize: 10, color: Colors.textTertiary },
-  labelActive: { color: Colors.primary, fontWeight: '600' },
+  inner: {
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+  },
+  tabBtn: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  iconWrap: {
+    width: 40, height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+  },
+  iconWrapActive: {
+    backgroundColor: Colors.primaryLight,
+  },
+  icon: {
+    fontSize: 20,
+    color: Colors.textTertiary,
+  },
+  iconActive: {
+    color: Colors.primary,
+  },
+  label: {
+    fontSize: 10,
+    color: Colors.textTertiary,
+    fontWeight: '500',
+  },
+  labelActive: {
+    color: Colors.primary,
+    fontWeight: '600',
+  },
 })
