@@ -2,6 +2,7 @@ import { useState } from 'react'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
+import { Alert } from 'react-native'
 
 export function usePhotoUpload() {
   const { session, refreshProfile } = useAuth()
@@ -9,13 +10,15 @@ export function usePhotoUpload() {
 
   async function pickAndUploadPhoto(): Promise<string | null> {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!permission.granted) return null
+    if (!permission.granted) {
+      Alert.alert('Permission required', 'Please allow access to your photos in Settings.')
+      return null
+    }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.7,
+      allowsEditing: false,
+      quality: 0.8,
       base64: true,
     })
 
@@ -23,11 +26,24 @@ export function usePhotoUpload() {
     const asset = result.assets[0]
     if (!asset || !asset.base64) return null
 
+    Alert.alert(
+      'Upload photo',
+      'Upload this photo to your profile?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Upload',
+          onPress: () => uploadPhoto(asset.base64!, asset.uri),
+        },
+      ]
+    )
+    return null
+  }
+
+  async function uploadPhoto(base64: string, uri: string): Promise<string | null> {
     setUploading(true)
     try {
       const fileName = `${session?.user.id}/${Date.now()}.jpg`
-
-      const base64 = asset.base64
       const byteCharacters = atob(base64)
       const byteNumbers = new Array(byteCharacters.length)
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -37,13 +53,10 @@ export function usePhotoUpload() {
 
       const { error: uploadError } = await supabase.storage
         .from('Photos')
-        .upload(fileName, byteArray, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        })
+        .upload(fileName, byteArray, { contentType: 'image/jpeg', upsert: true })
 
       if (uploadError) {
-        console.error('Upload error:', uploadError)
+        Alert.alert('Upload failed', uploadError.message)
         return null
       }
 
@@ -64,6 +77,7 @@ export function usePhotoUpload() {
         .eq('id', session?.user.id)
 
       await refreshProfile()
+      Alert.alert('Done!', 'Your photo has been added to your profile.')
       return publicUrl
     } finally {
       setUploading(false)

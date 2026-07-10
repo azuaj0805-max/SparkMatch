@@ -65,27 +65,16 @@ export function LikesScreen() {
       ) : (
         <View style={styles.queueWrap}>
           <Text style={styles.queueLabel}>{currentIndex + 1} of {count}</Text>
-
           <View style={styles.likeTile}>
             <View style={[styles.likeTilePhoto, !PREMIUM && styles.blurred]}>
-              <Avatar
-                name={currentLike?.liker?.first_name ?? '?'}
-                photo={PREMIUM ? currentLike?.liker?.photos?.[0] : null}
-                size={130}
-              />
+              <Avatar name={currentLike?.liker?.first_name ?? '?'} photo={PREMIUM ? currentLike?.liker?.photos?.[0] : null} size={130} />
             </View>
             <View style={styles.likeInfo}>
-              <Text style={styles.likeName}>
-                {PREMIUM ? `${currentLike?.liker?.first_name}, ${currentLike?.liker?.age}` : '• • • • •'}
-              </Text>
-              {PREMIUM && currentLike?.liker?.job_title && (
-                <Text style={styles.likeJob}>{currentLike.liker.job_title}{currentLike.liker.company ? ` · ${currentLike.liker.company}` : ''}</Text>
-              )}
+              <Text style={styles.likeName}>{PREMIUM ? `${currentLike?.liker?.first_name}, ${currentLike?.liker?.age}` : '• • • • •'}</Text>
+              {PREMIUM && currentLike?.liker?.job_title && <Text style={styles.likeJob}>{currentLike.liker.job_title}</Text>}
               {PREMIUM && currentLike?.liker?.salary_range && (
                 <View style={styles.likeSalary}>
-                  <Text style={styles.likeSalaryText}>
-                    💰 {SALARY_BADGE_LABELS[currentLike.liker.salary_range as keyof typeof SALARY_BADGE_LABELS]}
-                  </Text>
+                  <Text style={styles.likeSalaryText}>💰 {SALARY_BADGE_LABELS[currentLike.liker.salary_range as keyof typeof SALARY_BADGE_LABELS]}</Text>
                 </View>
               )}
               {currentLike?.message && PREMIUM && (
@@ -95,20 +84,11 @@ export function LikesScreen() {
               )}
             </View>
           </View>
-
           <View style={styles.navRow}>
-            <TouchableOpacity
-              style={[styles.navBtn, currentIndex === 0 && styles.navBtnDisabled]}
-              onPress={prevLike}
-              disabled={currentIndex === 0}
-            >
+            <TouchableOpacity style={[styles.navBtn, currentIndex === 0 && styles.navBtnDisabled]} onPress={prevLike} disabled={currentIndex === 0}>
               <Text style={styles.navBtnText}>← Previous</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.navBtn, styles.navBtnPrimary, currentIndex === count - 1 && styles.navBtnDisabled]}
-              onPress={nextLike}
-              disabled={currentIndex === count - 1}
-            >
+            <TouchableOpacity style={[styles.navBtn, styles.navBtnPrimary, currentIndex === count - 1 && styles.navBtnDisabled]} onPress={nextLike} disabled={currentIndex === count - 1}>
               <Text style={[styles.navBtnText, styles.navBtnPrimaryText]}>Next →</Text>
             </TouchableOpacity>
           </View>
@@ -120,20 +100,12 @@ export function LikesScreen() {
 
 export function ProfileScreen() {
   const { profile, signOut } = useAuth()
-  const { pickAndUploadPhoto, deletePhoto, uploading } = usePhotoUpload()
   const navigation = useNavigation<any>()
 
   if (!profile) return null
 
   const salaryLabel = profile.salary_range ? SALARY_BADGE_LABELS[profile.salary_range] : null
   const lookingForLabel = profile.looking_for ? LOOKING_FOR_LABELS[profile.looking_for] : null
-
-  async function handleDeletePhoto(url: string) {
-    Alert.alert('Remove photo', 'Are you sure you want to remove this photo?', [
-      { text: 'Cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deletePhoto(url) },
-    ])
-  }
 
   async function handleDeleteAccount() {
     Alert.alert(
@@ -165,13 +137,13 @@ export function ProfileScreen() {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
         <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
-          <Text style={styles.editBtnText}>Edit</Text>
+          <Text style={styles.editBtnText}>✏️ Edit</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScroll}>
 
-        {/* Hero */}
+        {/* Hero — read only view */}
         <View style={styles.profileHero}>
           <Avatar name={profile.first_name} photo={profile.photos?.[0]} size={76} />
           <View style={{ flex: 1 }}>
@@ -185,34 +157,39 @@ export function ProfileScreen() {
           </View>
         </View>
 
-        {/* Photos */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Photos</Text>
-          <View style={styles.photoGrid}>
-            {(profile.photos ?? []).map((url, i) => (
-              <TouchableOpacity key={i} style={styles.photoThumb} onLongPress={() => handleDeletePhoto(url)} activeOpacity={0.8}>
-                <Image source={{ uri: url }} style={styles.photoThumbImg} resizeMode="cover" />
-                <TouchableOpacity style={styles.photoDelete} onPress={() => handleDeletePhoto(url)}>
-                  <Text style={styles.photoDeleteText}>✕</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
-            {(profile.photos ?? []).length < 6 && (
-              <TouchableOpacity style={styles.photoAdd} onPress={pickAndUploadPhoto} disabled={uploading} activeOpacity={0.7}>
-                {uploading ? <ActivityIndicator color={Colors.primary} /> : <Text style={styles.photoAddIcon}>+</Text>}
-                <Text style={styles.photoAddText}>Add photo</Text>
-              </TouchableOpacity>
-            )}
+        {/* Photos — read only */}
+        {(profile.photos ?? []).length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Photos</Text>
+            <View style={styles.photoGrid}>
+              {(profile.photos ?? []).map((url, i) => (
+                <View key={i} style={styles.photoThumb}>
+                  <Image source={{ uri: url }} style={styles.photoThumbImg} resizeMode="cover" />
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.managePhotosBtn} onPress={() => navigation.navigate('EditProfile')}>
+              <Text style={styles.managePhotosBtnText}>Manage photos →</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.photoHint}>Tap ✕ to remove · Up to 6 photos</Text>
-        </View>
+        )}
+
+        {(profile.photos ?? []).length === 0 && (
+          <TouchableOpacity style={styles.addPhotosCard} onPress={() => navigation.navigate('EditProfile')}>
+            <Text style={styles.addPhotosIcon}>📷</Text>
+            <Text style={styles.addPhotosTitle}>Add photos</Text>
+            <Text style={styles.addPhotosSub}>Profiles with photos get 10× more likes</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Career */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Career</Text>
-          {profile.job_title && <InfoRow icon="💼" text={`${profile.job_title}${profile.company ? ` · ${profile.company}` : ''}`} />}
-          {profile.industry && <InfoRow icon="🏢" text={profile.industry} />}
-        </View>
+        {(profile.job_title || profile.industry) && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Career</Text>
+            {profile.job_title && <InfoRow icon="💼" text={`${profile.job_title}${profile.company ? ` · ${profile.company}` : ''}`} />}
+            {profile.industry && <InfoRow icon="🏢" text={profile.industry} />}
+          </View>
+        )}
 
         {/* Dating preferences */}
         {lookingForLabel && (
@@ -255,10 +232,10 @@ export function ProfileScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Account</Text>
           <TouchableOpacity style={styles.accountRow} onPress={() => navigation.navigate('EditProfile')}>
-            <Text style={styles.accountRowText}>✏️  Edit profile</Text>
+            <Text style={styles.accountRowText}>✏️  Edit profile & photos</Text>
             <Text style={styles.accountArrow}>→</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.accountRow} onPress={() => Alert.alert('Block or report', 'Go to a match or conversation, tap their name to view their profile, then tap ⋯ to block or report.')}>
+          <TouchableOpacity style={styles.accountRow} onPress={() => Alert.alert('Block or report', 'Open a match or conversation, tap their name to view their profile, then tap ⋯ to block or report.')}>
             <Text style={styles.accountRowText}>🚫  Block or report someone</Text>
             <Text style={styles.accountArrow}>→</Text>
           </TouchableOpacity>
@@ -332,15 +309,15 @@ const styles = StyleSheet.create({
   heroSalaryText: { fontSize: 11, fontWeight: '600', color: Colors.green },
   card: { backgroundColor: Colors.background, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, padding: Spacing.lg },
   cardTitle: { fontSize: 11, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  photoThumb: { width: 90, height: 120, borderRadius: Radius.md, overflow: 'hidden', position: 'relative' },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  photoThumb: { width: 90, height: 120, borderRadius: Radius.md, overflow: 'hidden' },
   photoThumbImg: { width: '100%', height: '100%' },
-  photoDelete: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
-  photoDeleteText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  photoAdd: { width: 90, height: 120, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  photoAddIcon: { fontSize: 24, color: Colors.textTertiary },
-  photoAddText: { fontSize: 11, color: Colors.textTertiary },
-  photoHint: { fontSize: 11, color: Colors.textTertiary },
+  managePhotosBtn: { alignSelf: 'flex-start' },
+  managePhotosBtnText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+  addPhotosCard: { backgroundColor: Colors.primaryLight, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.primaryLight, padding: Spacing.xl, alignItems: 'center', gap: 6 },
+  addPhotosIcon: { fontSize: 32, marginBottom: 4 },
+  addPhotosTitle: { fontSize: 16, fontWeight: '700', color: Colors.primary },
+  addPhotosSub: { fontSize: 13, color: Colors.primaryDark, textAlign: 'center' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   infoIcon: { fontSize: 15 },
   infoText: { fontSize: 14, color: Colors.text, flex: 1 },
