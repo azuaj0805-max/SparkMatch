@@ -5,30 +5,45 @@ import {
   ScrollView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { supabase } from '../../lib/supabase'
+import { WelcomeScreen } from './WelcomeScreen'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 
+type Mode = 'welcome' | 'signup' | 'signin'
+
 export function AuthScreen() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signup')
+  const [mode, setMode] = useState<Mode>('welcome')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   async function handleSignUp() {
-    if (!email || !password) { Alert.alert('Please enter email and password'); return }
-    if (password.length < 6) { Alert.alert('Password must be at least 6 characters'); return }
+    if (!email || !password) { Alert.alert('Missing fields', 'Please enter your email and a password.'); return }
+    if (password.length < 6) { Alert.alert('Password too short', 'Password must be at least 6 characters.'); return }
     setLoading(true)
     const { error } = await supabase.auth.signUp({ email, password })
     setLoading(false)
-    if (error) Alert.alert('Error', error.message)
+    if (error) Alert.alert('Sign up failed', error.message)
   }
 
   async function handleSignIn() {
-    if (!email || !password) { Alert.alert('Please enter email and password'); return }
+    if (!email || !password) { Alert.alert('Missing fields', 'Please enter your email and password.'); return }
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) Alert.alert('Sign in failed', error.message)
+  }
+
+  if (mode === 'welcome') {
+    return (
+      <WelcomeScreen
+        onGetStarted={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMode('signup') }}
+        onSignIn={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMode('signin') }}
+      />
+    )
   }
 
   return (
@@ -36,37 +51,31 @@ export function AuthScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          {/* Hero */}
-          <View style={styles.hero}>
-            <View style={styles.logoWrap}>
-              <Text style={styles.logoM}>M</Text>
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => setMode('welcome')} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={24} color={Colors.text} />
+            </TouchableOpacity>
+            <View style={styles.logoSmall}>
+              <Text style={styles.logoSmallText}>M</Text>
             </View>
-            <Text style={styles.appName}>Meridian</Text>
-            <Text style={styles.tagline}>Where ambition meets connection</Text>
           </View>
 
-          {/* Card */}
-          <View style={styles.card}>
-            {/* Tab switcher */}
-            <View style={styles.tabRow}>
-              <TouchableOpacity
-                style={[styles.tab, mode === 'signup' && styles.tabActive]}
-                onPress={() => setMode('signup')}
-              >
-                <Text style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>Create account</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tab, mode === 'signin' && styles.tabActive]}
-                onPress={() => setMode('signin')}
-              >
-                <Text style={[styles.tabText, mode === 'signin' && styles.tabTextActive]}>Sign in</Text>
-              </TouchableOpacity>
-            </View>
+          <Text style={styles.title}>
+            {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+          </Text>
+          <Text style={styles.sub}>
+            {mode === 'signup'
+              ? 'Join thousands of ambitious professionals finding meaningful connections.'
+              : 'Sign in to continue building your connections.'}
+          </Text>
 
-            {/* Fields */}
-            <View style={styles.form}>
-              <View style={styles.inputWrap}>
-                <Text style={styles.inputLabel}>Email</Text>
+          {/* Form */}
+          <View style={styles.form}>
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Email address</Text>
+              <View style={styles.inputRow}>
+                <Ionicons name="mail-outline" size={18} color={Colors.textTertiary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="you@example.com"
@@ -78,111 +87,98 @@ export function AuthScreen() {
                   autoCorrect={false}
                 />
               </View>
-              <View style={styles.inputWrap}>
-                <Text style={styles.inputLabel}>Password</Text>
+            </View>
+
+            <View style={styles.inputWrap}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.inputRow}>
+                <Ionicons name="lock-closed-outline" size={18} color={Colors.textTertiary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="6+ characters"
+                  placeholder={mode === 'signup' ? '6+ characters' : 'Your password'}
                   placeholderTextColor={Colors.textTertiary}
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                 />
+                <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={Colors.textTertiary} />
+                </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                style={styles.submitBtn}
-                onPress={mode === 'signup' ? handleSignUp : handleSignIn}
-                disabled={loading}
-                activeOpacity={0.85}
-              >
-                {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.submitText}>
-                      {mode === 'signup' ? 'Get started' : 'Sign in'}
-                    </Text>
-                }
-              </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={styles.submitBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                mode === 'signup' ? handleSignUp() : handleSignIn()
+              }}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <>
+                    <Text style={styles.submitText}>
+                      {mode === 'signup' ? 'Create account' : 'Sign in'}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                  </>
+              }
+            </TouchableOpacity>
           </View>
 
-          {/* Footer */}
+          {/* Switch mode */}
+          <TouchableOpacity
+            style={styles.switchBtn}
+            onPress={() => setMode(mode === 'signup' ? 'signin' : 'signup')}
+          >
+            <Text style={styles.switchText}>
+              {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
+              <Text style={styles.switchLink}>
+                {mode === 'signup' ? 'Sign in' : 'Create one'}
+              </Text>
+            </Text>
+          </TouchableOpacity>
+
           <Text style={styles.legal}>
             By continuing you agree to our Terms of Service and Privacy Policy.
           </Text>
-
-          {/* Value props */}
-          <View style={styles.props}>
-            <PropRow icon="💼" text="Career-first matching with salary transparency" />
-            <PropRow icon="🎯" text="Filter by ambition, industry, and goals" />
-            <PropRow icon="🔒" text="Verified profiles, real connections" />
-          </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
 
-function PropRow({ icon, text }: { icon: string; text: string }) {
-  return (
-    <View style={styles.propRow}>
-      <Text style={styles.propIcon}>{icon}</Text>
-      <Text style={styles.propText}>{text}</Text>
-    </View>
-  )
-}
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.navy },
-  container: { flexGrow: 1, padding: Spacing.xl },
-  hero: { alignItems: 'center', paddingTop: 40, paddingBottom: 32 },
-  logoWrap: {
-    width: 72, height: 72, borderRadius: 20,
-    backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 14,
-  },
-  logoM: { fontSize: 36, fontWeight: '700', color: '#fff', letterSpacing: -1 },
-  appName: { fontSize: 32, fontWeight: '700', color: '#fff', letterSpacing: -0.5, marginBottom: 6 },
-  tagline: { fontSize: 15, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.1 },
-  card: {
-    backgroundColor: Colors.background,
-    borderRadius: Radius.xxl,
-    padding: Spacing.xl,
-    marginBottom: Spacing.xl,
-  },
-  tabRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.full,
-    padding: 4,
-    marginBottom: Spacing.xl,
-  },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: Radius.full },
-  tabActive: { backgroundColor: Colors.background },
-  tabText: { fontSize: 14, color: Colors.textTertiary, fontWeight: '500' },
-  tabTextActive: { color: Colors.text, fontWeight: '600' },
-  form: { gap: Spacing.md },
-  inputWrap: { gap: 6 },
-  inputLabel: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary, marginLeft: 2 },
-  input: {
+  safeArea: { flex: 1, backgroundColor: Colors.background },
+  container: { flexGrow: 1, padding: Spacing.xl, paddingTop: Spacing.lg },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 },
+  backBtn: { padding: 4 },
+  logoSmall: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  logoSmallText: { fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  title: { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.8, marginBottom: 8 },
+  sub: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 32 },
+  form: { gap: Spacing.lg, marginBottom: Spacing.xl },
+  inputWrap: { gap: 8 },
+  inputLabel: { fontSize: 13, fontWeight: '600', color: Colors.text, marginLeft: 2 },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'center',
     borderWidth: 1, borderColor: Colors.border,
-    borderRadius: Radius.lg, paddingHorizontal: Spacing.lg,
-    paddingVertical: 13, fontSize: 15, color: Colors.text,
-    backgroundColor: Colors.background,
+    borderRadius: Radius.lg, backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.md,
   },
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, paddingVertical: 14, fontSize: 15, color: Colors.text },
+  eyeBtn: { padding: 4 },
   submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: Spacing.sm,
+    backgroundColor: Colors.primary, borderRadius: Radius.full,
+    paddingVertical: 15, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4,
   },
-  submitText: { color: '#fff', fontSize: 15, fontWeight: '600', letterSpacing: 0.3 },
-  legal: { fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: Spacing.xl, lineHeight: 16 },
-  props: { gap: Spacing.md, paddingBottom: 40 },
-  propRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  propIcon: { fontSize: 20, width: 32, textAlign: 'center' },
-  propText: { fontSize: 14, color: 'rgba(255,255,255,0.7)', flex: 1, lineHeight: 20 },
+  submitText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+  switchBtn: { alignItems: 'center', marginBottom: Spacing.lg },
+  switchText: { fontSize: 14, color: Colors.textSecondary },
+  switchLink: { color: Colors.primary, fontWeight: '700' },
+  legal: { fontSize: 11, color: Colors.textTertiary, textAlign: 'center', lineHeight: 16 },
 })
