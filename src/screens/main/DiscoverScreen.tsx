@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useDiscover } from '../../hooks/useDiscover'
 import { Avatar } from '../../components/Avatar'
+import { SkeletonProfileCard } from '../../components/SkeletonCard'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { Profile, SALARY_BADGE_LABELS } from '../../types'
 
@@ -57,14 +58,6 @@ export function DiscoverScreen() {
     }
   }
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[GlobalStyles.safeArea, styles.centered]}>
-        <ActivityIndicator color={Colors.primary} size="large" />
-      </SafeAreaView>
-    )
-  }
-
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
@@ -85,7 +78,11 @@ export function DiscoverScreen() {
         </View>
       )}
 
-      {profiles.length === 0 ? (
+      {loading ? (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.stack}>
+          <SkeletonProfileCard />
+        </ScrollView>
+      ) : profiles.length === 0 ? (
         <View style={styles.empty}>
           <View style={styles.emptyIconWrap}>
             <Ionicons name="compass-outline" size={40} color={Colors.primary} />
@@ -248,7 +245,6 @@ function Tag({ label }: { label: string }) {
 }
 
 const styles = StyleSheet.create({
-  centered: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   headerEyebrow: { fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
   headerTitle: { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
