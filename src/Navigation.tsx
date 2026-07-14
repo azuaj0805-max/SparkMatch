@@ -34,7 +34,7 @@ function MainTabs() {
 }
 
 function CustomTabBar({ state, navigation }: any) {
-  const { matches } = useMatches()
+  const matches: any[] = []
   const unreadCount = matches.filter(m => m.last_message && !m.last_message_at).length
   const newMatchCount = matches.filter(m => !m.last_message).length
   const totalBadge = newMatchCount

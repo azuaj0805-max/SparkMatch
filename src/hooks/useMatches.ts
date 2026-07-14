@@ -12,40 +12,22 @@ export function useMatches() {
     if (!session) return
     fetchMatches()
 
-    const matchSub = supabase
-      .channel('matches')
+    const sub = supabase
+      .channel(`matches-${session.user.id}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'matches',
-        filter: `user1_id=eq.${session.user.id}`,
-      }, () => fetchMatches())
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'matches',
-        filter: `user2_id=eq.${session.user.id}`,
       }, () => fetchMatches())
       .subscribe()
 
-    const msgSub = supabase
-      .channel('messages-preview')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-      }, () => fetchMatches())
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(matchSub)
-      supabase.removeChannel(msgSub)
-    }
+    return () => { supabase.removeChannel(sub) }
   }, [session])
 
   async function fetchMatches() {
     if (!session) return
     const userId = session.user.id
+
     const { data, error } = await supabase
       .from('matches')
       .select(`*, user1:profiles!matches_user1_id_fkey(*), user2:profiles!matches_user2_id_fkey(*)`)

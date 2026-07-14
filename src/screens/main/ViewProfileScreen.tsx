@@ -70,7 +70,7 @@ export function ViewProfileScreen({ route }: any) {
       reported_id: profile.id,
       reason: selectedReason,
       note: reportNote,
-    }).throwOnError().catch(() => {})
+    })
     setSubmitting(false)
     setReportVisible(false)
     Alert.alert('Report submitted', 'Thank you for keeping SparkMatch safe. We\'ll review this report within 24 hours.')

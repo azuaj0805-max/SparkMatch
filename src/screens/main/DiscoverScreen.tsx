@@ -1,22 +1,35 @@
 import React, { useState } from 'react'
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Modal, TextInput, Alert,
+  View, Text, TouchableOpacity, StyleSheet,
+  Modal, TextInput, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useDiscover } from '../../hooks/useDiscover'
+import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../../components/Avatar'
+import { SwipeableCard } from '../../components/SwipeableCard'
 import { SkeletonProfileCard } from '../../components/SkeletonCard'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { Profile, SALARY_BADGE_LABELS } from '../../types'
+import { getDistanceMiles, formatDistance } from '../../lib/distance'
 
 export function DiscoverScreen() {
   const { profiles, loading, likesRemaining, likeProfile, passProfile } = useDiscover()
+  const { profile: myProfile } = useAuth()
   const [matchModal, setMatchModal] = useState(false)
   const [commentModal, setCommentModal] = useState<Profile | null>(null)
   const [comment, setComment] = useState('')
+  const [currentIndex, setCurrentIndex] = useState(0)
+
+  const currentProfile = profiles[currentIndex]
+
+  function getDistance(profile: Profile): string | null {
+    if (!myProfile?.lat || !myProfile?.lng || !profile.lat || !profile.lng) return null
+    const miles = getDistanceMiles(myProfile.lat, myProfile.lng, profile.lat, profile.lng)
+    return formatDistance(miles)
+  }
 
   async function handleLike(profile: Profile) {
     if (likesRemaining <= 0) {
@@ -24,8 +37,8 @@ export function DiscoverScreen() {
       Alert.alert('No likes remaining', 'You have used all 4 likes for today. Come back tomorrow!')
       return
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     const result = await likeProfile(profile.id)
+    setCurrentIndex(i => i + 1)
     if (result === 'match') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setMatchModal(true)
@@ -37,8 +50,8 @@ export function DiscoverScreen() {
   }
 
   async function handlePass(profile: Profile) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    passProfile(profile.id)
+    await passProfile(profile.id)
+    setCurrentIndex(i => i + 1)
   }
 
   async function submitComment() {
@@ -52,6 +65,7 @@ export function DiscoverScreen() {
     const result = await likeProfile(commentModal.id, comment)
     setCommentModal(null)
     setComment('')
+    setCurrentIndex(i => i + 1)
     if (result === 'match') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setMatchModal(true)
@@ -78,32 +92,44 @@ export function DiscoverScreen() {
         </View>
       )}
 
-      {loading ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.stack}>
-          <SkeletonProfileCard />
-        </ScrollView>
-      ) : profiles.length === 0 ? (
-        <View style={styles.empty}>
-          <View style={styles.emptyIconWrap}>
-            <Ionicons name="compass-outline" size={40} color={Colors.primary} />
+      <View style={styles.cardArea}>
+        {loading ? (
+          <View style={styles.cardPadding}>
+            <SkeletonProfileCard />
           </View>
-          <Text style={styles.emptyTitle}>You've seen everyone</Text>
-          <Text style={styles.emptySub}>Check back later for new profiles in your area.</Text>
-        </View>
-      ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.stack}>
-          {profiles.slice(0, 3).map((profile) => (
-            <ProfileCard
-              key={profile.id}
-              profile={profile}
-              onLike={() => handleLike(profile)}
-              onPass={() => handlePass(profile)}
-              onComment={() => setCommentModal(profile)}
-              likesRemaining={likesRemaining}
-            />
-          ))}
-        </ScrollView>
-      )}
+        ) : !currentProfile ? (
+          <View style={styles.empty}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="compass-outline" size={40} color={Colors.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>You've seen everyone</Text>
+            <Text style={styles.emptySub}>Check back later for new profiles.</Text>
+          </View>
+        ) : (
+          <View style={styles.cardPadding}>
+            {profiles[currentIndex + 1] && (
+              <View style={[styles.bgCard, styles.bgCard2]} />
+            )}
+            {profiles[currentIndex + 2] && (
+              <View style={[styles.bgCard, styles.bgCard1]} />
+            )}
+            <SwipeableCard
+              key={currentProfile.id}
+              onSwipeRight={() => handleLike(currentProfile)}
+              onSwipeLeft={() => handlePass(currentProfile)}
+            >
+              <ProfileCard
+                profile={currentProfile}
+                distance={getDistance(currentProfile)}
+                onLike={() => handleLike(currentProfile)}
+                onPass={() => handlePass(currentProfile)}
+                onComment={() => setCommentModal(currentProfile)}
+                likesRemaining={likesRemaining}
+              />
+            </SwipeableCard>
+          </View>
+        )}
+      </View>
 
       {/* Match modal */}
       <Modal visible={matchModal} transparent animationType="fade">
@@ -153,8 +179,9 @@ export function DiscoverScreen() {
   )
 }
 
-function ProfileCard({ profile, onLike, onPass, onComment, likesRemaining }: {
+function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemaining }: {
   profile: Profile
+  distance: string | null
   onLike: () => void
   onPass: () => void
   onComment: () => void
@@ -180,7 +207,10 @@ function ProfileCard({ profile, onLike, onPass, onComment, likesRemaining }: {
             <Text style={styles.name}>{profile.first_name}, {profile.age}</Text>
             <View style={styles.metaRow}>
               <Ionicons name="location-outline" size={12} color={Colors.textTertiary} />
-              <Text style={styles.meta}>{profile.city}{profile.job_title ? `  ·  ${profile.job_title}` : ''}</Text>
+              <Text style={styles.meta}>
+                {distance ?? profile.city}
+                {profile.job_title ? `  ·  ${profile.job_title}` : ''}
+              </Text>
             </View>
           </View>
           {salaryLabel && (
@@ -198,7 +228,7 @@ function ProfileCard({ profile, onLike, onPass, onComment, likesRemaining }: {
           </View>
         )}
 
-        {profile.prompts?.map((p, i) => (
+        {profile.prompts?.slice(0, 1).map((p, i) => (
           <View key={i} style={styles.promptBox}>
             <Text style={styles.promptLabel}>{p.question}</Text>
             <Text style={styles.promptAnswer}>{p.answer}</Text>
@@ -253,9 +283,13 @@ const styles = StyleSheet.create({
   likesCounterLabel: { fontSize: 10, color: Colors.primary, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.5 },
   limitBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.surface, padding: Spacing.md, marginHorizontal: Spacing.lg, marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },
   limitText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
-  stack: { padding: Spacing.lg, gap: Spacing.lg, paddingBottom: 90 },
+  cardArea: { flex: 1 },
+  cardPadding: { padding: Spacing.lg, flex: 1 },
+  bgCard: { position: 'absolute', left: Spacing.lg, right: Spacing.lg, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.background },
+  bgCard1: { top: Spacing.lg + 8, bottom: 0, transform: [{ scale: 0.95 }] },
+  bgCard2: { top: Spacing.lg + 4, bottom: 0, transform: [{ scale: 0.975 }] },
   card: { backgroundColor: Colors.background, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
-  photoArea: { height: 260, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  photoArea: { height: 240, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   verifiedBadge: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.blueLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
   verifiedText: { fontSize: 11, color: Colors.blue, fontWeight: '600' },
   cardBody: { padding: Spacing.lg, gap: Spacing.md },
