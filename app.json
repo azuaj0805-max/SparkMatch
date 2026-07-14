@@ -21,8 +21,9 @@
       },
       "package": "com.meridian.app",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -34,6 +35,11 @@
           "locationWhenInUsePermission": "Meridian uses your location to show you people nearby."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bb5d7b96-12ed-482a-b4c8-1145df892296"
+      }
+    }
   }
 }

@@ -276,6 +276,8 @@ export function ProfileScreen() {
           <AccountRow icon="pencil-outline" label="Edit profile & photos" onPress={() => navigation.navigate('EditProfile')} />
           <AccountRow icon="ban-outline" label="Block or report someone" onPress={() => Alert.alert('Block or report', 'Open a match or conversation, tap their name to view their profile, then tap ⋯ to block or report.')} />
           <AccountRow icon="log-out-outline" label="Sign out" onPress={() => Alert.alert('Sign out', 'Are you sure?', [{ text: 'Cancel' }, { text: 'Sign out', style: 'destructive', onPress: signOut }])} />
+          <AccountRow icon="document-text-outline" label="Privacy Policy" onPress={() => navigation.navigate("Legal", { type: "privacy" })} />
+          <AccountRow icon="reader-outline" label="Terms of Service" onPress={() => navigation.navigate("Legal", { type: "terms" })} />
           <AccountRow icon="trash-outline" label="Delete account" onPress={handleDeleteAccount} danger last />
         </View>
 

@@ -6,7 +6,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { AuthProvider, useAuth } from './hooks/useAuth'
-import { useMatches } from './hooks/useMatches'
 import { AuthScreen } from './screens/auth/AuthScreen'
 import { OnboardingScreen } from './screens/onboarding/OnboardingScreen'
 import { DiscoverScreen } from './screens/main/DiscoverScreen'
@@ -14,6 +13,7 @@ import { MatchesScreen, ChatScreen } from './screens/main/MatchesScreen'
 import { LikesScreen, ProfileScreen } from './screens/main/ProfileScreen'
 import { ViewProfileScreen } from './screens/main/ViewProfileScreen'
 import { EditProfileScreen } from './screens/main/EditProfileScreen'
+import { LegalScreen } from './screens/legal/LegalScreen'
 import { Colors } from './lib/styles'
 
 const Stack = createNativeStackNavigator()
@@ -34,16 +34,11 @@ function MainTabs() {
 }
 
 function CustomTabBar({ state, navigation }: any) {
-  const matches: any[] = []
-  const unreadCount = matches.filter(m => m.last_message && !m.last_message_at).length
-  const newMatchCount = matches.filter(m => !m.last_message).length
-  const totalBadge = newMatchCount
-
   const tabs = [
-    { name: 'Discover', icon: 'compass-outline',   iconActive: 'compass',        label: 'Discover', badge: 0 },
-    { name: 'Likes',    icon: 'heart-outline',      iconActive: 'heart',          label: 'Likes',    badge: 0 },
-    { name: 'Matches',  icon: 'chatbubble-outline', iconActive: 'chatbubble',     label: 'Matches',  badge: totalBadge },
-    { name: 'Profile',  icon: 'person-outline',     iconActive: 'person',         label: 'Profile',  badge: 0 },
+    { name: 'Discover', icon: 'compass-outline',   iconActive: 'compass',      label: 'Discover' },
+    { name: 'Likes',    icon: 'heart-outline',      iconActive: 'heart',        label: 'Likes' },
+    { name: 'Matches',  icon: 'chatbubble-outline', iconActive: 'chatbubble',   label: 'Matches' },
+    { name: 'Profile',  icon: 'person-outline',     iconActive: 'person',       label: 'Profile' },
   ]
 
   return (
@@ -60,21 +55,12 @@ function CustomTabBar({ state, navigation }: any) {
             }}
             activeOpacity={0.7}
           >
-            <View style={tabStyles.iconContainer}>
-              <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
-                <Ionicons
-                  name={focused ? tab.iconActive as any : tab.icon as any}
-                  size={24}
-                  color={focused ? Colors.primary : Colors.textTertiary}
-                />
-              </View>
-              {tab.badge > 0 && (
-                <View style={tabStyles.badge}>
-                  <Text style={tabStyles.badgeText}>
-                    {tab.badge > 9 ? '9+' : tab.badge}
-                  </Text>
-                </View>
-              )}
+            <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
+              <Ionicons
+                name={focused ? tab.iconActive as any : tab.icon as any}
+                size={24}
+                color={focused ? Colors.primary : Colors.textTertiary}
+              />
             </View>
             <Text style={[tabStyles.label, focused && tabStyles.labelActive]}>
               {tab.label}
@@ -102,6 +88,7 @@ function RootNavigator() {
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="ViewProfile" component={ViewProfileScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          <Stack.Screen name="Legal" component={LegalScreen} />
         </>
       )}
     </Stack.Navigator>
@@ -129,25 +116,8 @@ const tabStyles = StyleSheet.create({
     flexDirection: 'row',
   },
   tabBtn: { flex: 1, alignItems: 'center', gap: 3 },
-  iconContainer: { position: 'relative' },
-  iconWrap: {
-    width: 44, height: 34,
-    alignItems: 'center', justifyContent: 'center',
-    borderRadius: 17,
-  },
+  iconWrap: { width: 44, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 17 },
   iconWrapActive: { backgroundColor: Colors.primaryLight },
-  badge: {
-    position: 'absolute',
-    top: -2, right: -6,
-    backgroundColor: Colors.danger,
-    borderRadius: 10,
-    minWidth: 18, height: 18,
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: Colors.background,
-  },
-  badgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
   label: { fontSize: 10, color: Colors.textTertiary, fontWeight: '500' },
   labelActive: { color: Colors.primary, fontWeight: '700' },
 })
