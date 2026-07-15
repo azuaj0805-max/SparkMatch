@@ -22,20 +22,19 @@
         "backgroundColor": "#101E3B"
       },
       "package": "com.meridian.app",
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
     },
     "plugins": [
       "expo-image-picker",
       "expo-notifications",
-      [
-        "expo-location",
-        {
-          "locationWhenInUsePermission": "Meridian uses your location to show you people nearby."
-        }
-      ]
-    ]
-  {
+      ["expo-location", {
+        "locationWhenInUsePermission": "Meridian uses your location to show you people nearby."
+      }]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bb5d7b96-12ed-482a-b4c8-1145df892296"
+      }
+    }
+  }
 }
