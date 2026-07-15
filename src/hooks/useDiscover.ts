@@ -48,13 +48,23 @@ export function useDiscover() {
     const seenIds = (alreadySeen ?? []).map((l: any) => l.liked_id)
     seenIds.push(session.user.id)
 
+    const myElo = (profile as any).elo_score ?? 1000
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .not('id', 'in', `(${seenIds.join(',') || 'null'})`)
-      .limit(20)
+      .limit(50)
 
-    if (!error && data) setProfiles(data as Profile[])
+    if (!error && data) {
+      // Sort by Elo proximity to current user
+      const sorted = (data as any[]).sort((a, b) => {
+        const distA = Math.abs((a.elo_score ?? 1000) - myElo)
+        const distB = Math.abs((b.elo_score ?? 1000) - myElo)
+        return distA - distB
+      })
+      setProfiles(sorted as Profile[])
+    }
     setLoading(false)
   }
 
@@ -89,9 +99,17 @@ export function useDiscover() {
     setLikesRemaining(prev => Math.max(0, prev - 1))
   }
 
+  async function updateElo(likedId: string, isPass: boolean) {
+    if (!session) return
+    await supabase.rpc('update_elo_on_like', {
+      liker: session.user.id,
+      liked: likedId,
+      is_pass: isPass,
+    })
+  }
+
   async function likeProfile(likedId: string, message?: string): Promise<'match' | 'liked' | 'no_likes' | 'conversation_limit'> {
     if (!session) return 'liked'
-
     if (likesRemaining <= 0) return 'no_likes'
 
     const canConverse = await checkConversationLimit()
@@ -105,6 +123,7 @@ export function useDiscover() {
     })
 
     await incrementDailyLikes()
+    await updateElo(likedId, false)
 
     const { data: theirLike } = await supabase
       .from('likes')
@@ -119,11 +138,9 @@ export function useDiscover() {
         user1_id: session.user.id,
         user2_id: likedId,
       })
-      removeFromStack(likedId)
       return 'match'
     }
 
-    removeFromStack(likedId)
     return 'liked'
   }
 
@@ -135,11 +152,7 @@ export function useDiscover() {
       message: null,
       passed: true,
     })
-    removeFromStack(passedId)
-  }
-
-  function removeFromStack(id: string) {
-    setProfiles(prev => prev.filter(p => p.id !== id))
+    await updateElo(passedId, true)
   }
 
   return { profiles, loading, likesRemaining, likeProfile, passProfile, refresh: fetchProfiles }
