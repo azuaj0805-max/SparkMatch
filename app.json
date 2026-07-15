@@ -4,7 +4,7 @@
     "slug": "meridian",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.svg",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "backgroundColor": "#101E3B"
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.svg",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#101E3B"
       },
       "package": "com.meridian.app",
@@ -37,5 +37,5 @@
         }
       ]
     ]
-  }
+  {
 }
