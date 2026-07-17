@@ -2,6 +2,7 @@ import React from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
+  TouchableWithoutFeedback, Keyboard,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -16,7 +17,7 @@ import { Profile } from '../../types'
 function isOnline(lastActive: string | null): boolean {
   if (!lastActive) return false
   const diff = Date.now() - new Date(lastActive).getTime()
-  return diff < 5 * 60 * 1000 // online if active within 5 minutes
+  return diff < 5 * 60 * 1000
 }
 
 function getActiveStatus(lastActive: string | null): string {
@@ -181,9 +182,7 @@ export function ChatScreen({ route }: any) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.chatName}>{otherUser.first_name}</Text>
-            <Text style={styles.chatSub}>
-              {getActiveStatus((otherUser as any).last_active)}
-            </Text>
+            <Text style={styles.chatSub}>{getActiveStatus((otherUser as any).last_active)}</Text>
           </View>
           <View style={styles.viewProfileBtn}>
             <Text style={styles.viewProfileText}>Profile</Text>
@@ -194,95 +193,99 @@ export function ChatScreen({ route }: any) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {loading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color={Colors.primary} />
-          </View>
-        ) : messages.length === 0 ? (
-          <View style={styles.emptyChat}>
-            <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={80} />
-            <Text style={styles.emptyChatTitle}>You matched with {otherUser.first_name}</Text>
-            <Text style={styles.emptyChatSub}>Start the conversation — say something thoughtful.</Text>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatRef}
-            data={messages}
-            keyExtractor={m => m.id}
-            contentContainerStyle={styles.messageList}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item, index }) => {
-              const isMe = item.sender_id === myId
-              const prevMsg = messages[index - 1]
-              const nextMsg = messages[index + 1]
-              const isLast = !nextMsg || nextMsg.sender_id !== item.sender_id
-              const showAvatar = !isMe && (!nextMsg || nextMsg.sender_id !== item.sender_id)
-              const isRead = isMe && item.read && item.read_at
-              const isLastFromMe = isMe && !messages.slice(index + 1).some(m => m.sender_id === myId)
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={{ flex: 1 }}>
+            {loading ? (
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator color={Colors.primary} />
+              </View>
+            ) : messages.length === 0 ? (
+              <View style={styles.emptyChat}>
+                <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={80} />
+                <Text style={styles.emptyChatTitle}>You matched with {otherUser.first_name}</Text>
+                <Text style={styles.emptyChatSub}>Start the conversation — say something thoughtful.</Text>
+              </View>
+            ) : (
+              <FlatList
+                ref={flatRef}
+                data={messages}
+                keyExtractor={m => m.id}
+                contentContainerStyle={styles.messageList}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item, index }) => {
+                  const isMe = item.sender_id === myId
+                  const nextMsg = messages[index + 1]
+                  const isLast = !nextMsg || nextMsg.sender_id !== item.sender_id
+                  const showAvatar = !isMe && isLast
+                  const isLastFromMe = isMe && !messages.slice(index + 1).some(m => m.sender_id === myId)
 
-              return (
-                <View style={[styles.msgRow, isMe ? styles.msgRowMe : styles.msgRowThem, { marginBottom: isLast ? 8 : 2 }]}>
-                  {!isMe && (
-                    <View style={styles.msgAvatarWrap}>
-                      {showAvatar
-                        ? <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={30} />
-                        : <View style={{ width: 30 }} />
-                      }
-                    </View>
-                  )}
-                  <View style={[styles.msgContent, isMe ? styles.msgContentMe : styles.msgContentThem]}>
-                    <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-                      <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>
-                        {item.content}
-                      </Text>
-                    </View>
-                    {isLast && (
-                      <View style={[styles.msgMeta, isMe && styles.msgMetaMe]}>
-                        <Text style={styles.msgTime}>
-                          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                        {isMe && isLastFromMe && (
-                          <View style={styles.readReceipt}>
-                            {isRead ? (
-                              <>
-                                <Ionicons name="checkmark-done" size={14} color={Colors.primary} />
-                                <Text style={styles.readText}>Read</Text>
-                              </>
-                            ) : (
-                              <Ionicons name="checkmark" size={14} color={Colors.textTertiary} />
+                  return (
+                    <View style={[styles.msgRow, isMe ? styles.msgRowMe : styles.msgRowThem, { marginBottom: isLast ? 8 : 2 }]}>
+                      {!isMe && (
+                        <View style={styles.msgAvatarWrap}>
+                          {showAvatar
+                            ? <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={30} />
+                            : <View style={{ width: 30 }} />
+                          }
+                        </View>
+                      )}
+                      <View style={[styles.msgContent, isMe ? styles.msgContentMe : styles.msgContentThem]}>
+                        <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
+                          <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>{item.content}</Text>
+                        </View>
+                        {isLast && (
+                          <View style={[styles.msgMeta, isMe && styles.msgMetaMe]}>
+                            <Text style={styles.msgTime}>
+                              {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                            {isMe && isLastFromMe && (
+                              <View style={styles.readReceipt}>
+                                {item.read ? (
+                                  <>
+                                    <Ionicons name="checkmark-done" size={14} color={Colors.primary} />
+                                    <Text style={styles.readText}>Read</Text>
+                                  </>
+                                ) : (
+                                  <Ionicons name="checkmark" size={14} color={Colors.textTertiary} />
+                                )}
+                              </View>
                             )}
                           </View>
                         )}
                       </View>
-                    )}
-                  </View>
-                </View>
-              )
-            }}
-          />
-        )}
+                    </View>
+                  )
+                }}
+              />
+            )}
 
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.chatInput}
-            placeholder="Message..."
-            placeholderTextColor={Colors.textTertiary}
-            value={text}
-            onChangeText={setText}
-            multiline
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            activeOpacity={0.8}
-            disabled={!text.trim()}
-          >
-            <Ionicons name="arrow-up" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder="Message..."
+                placeholderTextColor={Colors.textTertiary}
+                value={text}
+                onChangeText={setText}
+                multiline
+                returnKeyType="send"
+                onSubmitEditing={handleSend}
+                blurOnSubmit={false}
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
+                onPress={handleSend}
+                activeOpacity={0.8}
+                disabled={!text.trim()}
+              >
+                <Ionicons name="arrow-up" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )

@@ -9,8 +9,8 @@ import * as Haptics from 'expo-haptics'
 import { useDiscover, DiscoverFilters } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../../components/Avatar'
-import { SwipeableCard } from '../../components/SwipeableCard'
 import { SkeletonProfileCard } from '../../components/SkeletonCard'
+import { MatchModal } from '../../components/MatchModal'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { Profile, SALARY_BADGE_LABELS } from '../../types'
 import { getDistanceMiles, formatDistance } from '../../lib/distance'
@@ -40,12 +40,10 @@ export function DiscoverScreen() {
       Alert.alert('No likes remaining', 'You have used all 4 likes for today. Come back tomorrow!')
       return
     }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     const result = await likeProfile(profile.id)
     setCurrentIndex(i => i + 1)
-    if (result === 'match') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      setMatchModal(true)
-    }
+    if (result === 'match') setMatchModal(true)
     if (result === 'conversation_limit') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
       Alert.alert('Conversation limit', 'You can only have 4 active conversations at a time.')
@@ -53,6 +51,7 @@ export function DiscoverScreen() {
   }
 
   async function handlePass(profile: Profile) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     await passProfile(profile.id)
     setCurrentIndex(i => i + 1)
   }
@@ -64,10 +63,7 @@ export function DiscoverScreen() {
     setCommentModal(null)
     setComment('')
     setCurrentIndex(i => i + 1)
-    if (result === 'match') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      setMatchModal(true)
-    }
+    if (result === 'match') setMatchModal(true)
   }
 
   function applyFilters() {
@@ -107,11 +103,9 @@ export function DiscoverScreen() {
         </View>
       )}
 
-      <View style={styles.cardArea}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {loading ? (
-          <View style={styles.cardPadding}>
-            <SkeletonProfileCard />
-          </View>
+          <SkeletonProfileCard />
         ) : !currentProfile ? (
           <View style={styles.empty}>
             <View style={styles.emptyIconWrap}>
@@ -124,26 +118,24 @@ export function DiscoverScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.cardPadding}>
-            {profiles[currentIndex + 1] && <View style={[styles.bgCard, styles.bgCard2]} />}
-            {profiles[currentIndex + 2] && <View style={[styles.bgCard, styles.bgCard1]} />}
-            <SwipeableCard
-              key={currentProfile.id}
-              onSwipeRight={() => handleLike(currentProfile)}
-              onSwipeLeft={() => handlePass(currentProfile)}
-            >
-              <ProfileCard
-                profile={currentProfile}
-                distance={getDistance(currentProfile)}
-                onLike={() => handleLike(currentProfile)}
-                onPass={() => handlePass(currentProfile)}
-                onComment={() => setCommentModal(currentProfile)}
-                likesRemaining={likesRemaining}
-              />
-            </SwipeableCard>
-          </View>
+          <ProfileCard
+            key={currentProfile.id}
+            profile={currentProfile}
+            distance={getDistance(currentProfile)}
+            onLike={() => handleLike(currentProfile)}
+            onPass={() => handlePass(currentProfile)}
+            onComment={() => setCommentModal(currentProfile)}
+            likesRemaining={likesRemaining}
+          />
         )}
-      </View>
+      </ScrollView>
+
+      {/* Match modal */}
+      <MatchModal
+        visible={matchModal}
+        onSendMessage={() => setMatchModal(false)}
+        onKeepDiscovering={() => setMatchModal(false)}
+      />
 
       {/* Filter modal */}
       <Modal visible={filterModal} transparent animationType="slide">
@@ -151,11 +143,10 @@ export function DiscoverScreen() {
           <View style={styles.filterCard}>
             <View style={styles.filterHeader}>
               <Text style={styles.filterTitle}>Filters</Text>
-              <TouchableOpacity onPress={() => { setTempFilters({ minAge: 18, maxAge: 50, maxDistance: 50 }); }}>
+              <TouchableOpacity onPress={() => setTempFilters({ minAge: 18, maxAge: 50, maxDistance: 50 })}>
                 <Text style={styles.resetText}>Reset</Text>
               </TouchableOpacity>
             </View>
-
             <Text style={styles.filterLabel}>Age range</Text>
             <View style={styles.filterRow}>
               <View style={styles.filterInputWrap}>
@@ -180,7 +171,6 @@ export function DiscoverScreen() {
                 />
               </View>
             </View>
-
             <Text style={[styles.filterLabel, { marginTop: Spacing.lg }]}>Maximum distance</Text>
             <View style={styles.distanceOptions}>
               {[5, 10, 25, 50, 100].map(d => (
@@ -195,31 +185,11 @@ export function DiscoverScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-
             <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
               <Text style={styles.applyBtnText}>Apply filters</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelFilterBtn} onPress={() => setFilterModal(false)}>
               <Text style={styles.cancelFilterText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Match modal */}
-      <Modal visible={matchModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.matchCard}>
-            <View style={styles.matchIconWrap}>
-              <Ionicons name="heart" size={32} color={Colors.primary} />
-            </View>
-            <Text style={styles.matchTitle}>It's a match</Text>
-            <Text style={styles.matchSub}>You and this person both expressed interest. Start the conversation.</Text>
-            <TouchableOpacity style={styles.matchBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMatchModal(false) }}>
-              <Text style={styles.matchBtnText}>Send a message</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.keepBtn} onPress={() => setMatchModal(false)}>
-              <Text style={styles.keepText}>Keep discovering</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -362,18 +332,14 @@ const styles = StyleSheet.create({
   likesCounterLabel: { fontSize: 10, color: Colors.primary, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.5 },
   limitBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.surface, padding: Spacing.md, marginHorizontal: Spacing.lg, marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },
   limitText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
-  cardArea: { flex: 1 },
-  cardPadding: { padding: Spacing.lg, flex: 1 },
-  bgCard: { position: 'absolute', left: Spacing.lg, right: Spacing.lg, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.background },
-  bgCard1: { top: Spacing.lg + 8, bottom: 0, transform: [{ scale: 0.95 }] },
-  bgCard2: { top: Spacing.lg + 4, bottom: 0, transform: [{ scale: 0.975 }] },
+  scrollContent: { padding: Spacing.lg, paddingBottom: 100 },
   card: { backgroundColor: Colors.background, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
-  photoArea: { height: 240, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  photoArea: { height: 300, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   verifiedBadge: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.blueLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
   verifiedText: { fontSize: 11, color: Colors.blue, fontWeight: '600' },
   cardBody: { padding: Spacing.lg, gap: Spacing.md },
   nameRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  name: { fontSize: 20, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
+  name: { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   meta: { fontSize: 13, color: Colors.textTertiary },
   salaryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.greenLight, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.greenBorder },
@@ -386,18 +352,17 @@ const styles = StyleSheet.create({
   promptAnswer: { fontSize: 14, color: Colors.text, lineHeight: 20 },
   goalRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   goalText: { fontSize: 13, color: Colors.textSecondary },
-  actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, padding: Spacing.lg, borderTopWidth: 1, borderColor: Colors.border },
-  passBtn: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
-  likeBtn: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 20, padding: Spacing.xl, borderTopWidth: 1, borderColor: Colors.border },
+  passBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
+  likeBtn: { width: 70, height: 70, borderRadius: 35, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   likeBtnDisabled: { backgroundColor: Colors.borderDark },
-  commentBtn: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, borderColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryLight },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  commentBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryLight },
+  empty: { alignItems: 'center', justifyContent: 'center', padding: 40, paddingTop: 80 },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 8, letterSpacing: -0.3 },
   emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
   adjustBtn: { backgroundColor: Colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
   adjustBtnText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   modalOverlayBottom: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   filterCard: { backgroundColor: Colors.background, borderRadius: Radius.xxl, padding: 24, paddingBottom: 36 },
   filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
@@ -418,10 +383,6 @@ const styles = StyleSheet.create({
   applyBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   cancelFilterBtn: { alignItems: 'center', marginTop: 12, padding: 10 },
   cancelFilterText: { fontSize: 14, color: Colors.textSecondary },
-  matchCard: { backgroundColor: Colors.background, borderRadius: Radius.xxl, padding: 28, alignItems: 'center', width: '100%' },
-  matchIconWrap: { width: 72, height: 72, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  matchTitle: { fontSize: 26, fontWeight: '700', color: Colors.text, marginBottom: 8, letterSpacing: -0.5 },
-  matchSub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
   matchBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 14, width: '100%', alignItems: 'center' },
   matchBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   keepBtn: { marginTop: 12, padding: 10 },
