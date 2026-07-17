@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Modal, TextInput, Alert,
+  Modal, TextInput, Alert, ScrollView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { useDiscover } from '../../hooks/useDiscover'
+import { useDiscover, DiscoverFilters } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../../components/Avatar'
 import { SwipeableCard } from '../../components/SwipeableCard'
@@ -16,18 +16,21 @@ import { Profile, SALARY_BADGE_LABELS } from '../../types'
 import { getDistanceMiles, formatDistance } from '../../lib/distance'
 
 export function DiscoverScreen() {
-  const { profiles, loading, likesRemaining, likeProfile, passProfile } = useDiscover()
+  const { profiles, loading, likesRemaining, filters, setFilters, likeProfile, passProfile } = useDiscover()
   const { profile: myProfile } = useAuth()
   const [matchModal, setMatchModal] = useState(false)
   const [commentModal, setCommentModal] = useState<Profile | null>(null)
+  const [filterModal, setFilterModal] = useState(false)
   const [comment, setComment] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [tempFilters, setTempFilters] = useState<DiscoverFilters>(filters)
 
   const currentProfile = profiles[currentIndex]
 
   function getDistance(profile: Profile): string | null {
-    if (!myProfile?.lat || !myProfile?.lng || !profile.lat || !profile.lng) return null
-    const miles = getDistanceMiles(myProfile.lat, myProfile.lng, profile.lat, profile.lng)
+    if (!(myProfile as any)?.lat || !(myProfile as any)?.lng) return null
+    if (!(profile as any).lat || !(profile as any).lng) return null
+    const miles = getDistanceMiles((myProfile as any).lat, (myProfile as any).lng, (profile as any).lat, (profile as any).lng)
     return formatDistance(miles)
   }
 
@@ -56,11 +59,6 @@ export function DiscoverScreen() {
 
   async function submitComment() {
     if (!commentModal) return
-    if (likesRemaining <= 0) {
-      Alert.alert('No likes remaining', 'You have used all 4 likes for today.')
-      setCommentModal(null)
-      return
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     const result = await likeProfile(commentModal.id, comment)
     setCommentModal(null)
@@ -72,6 +70,14 @@ export function DiscoverScreen() {
     }
   }
 
+  function applyFilters() {
+    setFilters(tempFilters)
+    setCurrentIndex(0)
+    setFilterModal(false)
+  }
+
+  const filtersActive = filters.minAge !== 18 || filters.maxAge !== 50 || filters.maxDistance !== 50
+
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
@@ -79,9 +85,18 @@ export function DiscoverScreen() {
           <Text style={styles.headerEyebrow}>Meridian</Text>
           <Text style={styles.headerTitle}>Discover</Text>
         </View>
-        <View style={styles.likesCounter}>
-          <Text style={styles.likesCounterNum}>{likesRemaining}</Text>
-          <Text style={styles.likesCounterLabel}>likes left</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.filterBtn, filtersActive && styles.filterBtnActive]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setTempFilters(filters); setFilterModal(true) }}
+          >
+            <Ionicons name="options-outline" size={20} color={filtersActive ? Colors.primary : Colors.textSecondary} />
+            {filtersActive && <View style={styles.filterDot} />}
+          </TouchableOpacity>
+          <View style={styles.likesCounter}>
+            <Text style={styles.likesCounterNum}>{likesRemaining}</Text>
+            <Text style={styles.likesCounterLabel}>likes</Text>
+          </View>
         </View>
       </View>
 
@@ -103,16 +118,15 @@ export function DiscoverScreen() {
               <Ionicons name="compass-outline" size={40} color={Colors.primary} />
             </View>
             <Text style={styles.emptyTitle}>You've seen everyone</Text>
-            <Text style={styles.emptySub}>Check back later for new profiles.</Text>
+            <Text style={styles.emptySub}>Try adjusting your filters or check back later.</Text>
+            <TouchableOpacity style={styles.adjustBtn} onPress={() => setFilterModal(true)}>
+              <Text style={styles.adjustBtnText}>Adjust filters</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.cardPadding}>
-            {profiles[currentIndex + 1] && (
-              <View style={[styles.bgCard, styles.bgCard2]} />
-            )}
-            {profiles[currentIndex + 2] && (
-              <View style={[styles.bgCard, styles.bgCard1]} />
-            )}
+            {profiles[currentIndex + 1] && <View style={[styles.bgCard, styles.bgCard2]} />}
+            {profiles[currentIndex + 2] && <View style={[styles.bgCard, styles.bgCard1]} />}
             <SwipeableCard
               key={currentProfile.id}
               onSwipeRight={() => handleLike(currentProfile)}
@@ -130,6 +144,67 @@ export function DiscoverScreen() {
           </View>
         )}
       </View>
+
+      {/* Filter modal */}
+      <Modal visible={filterModal} transparent animationType="slide">
+        <View style={styles.modalOverlayBottom}>
+          <View style={styles.filterCard}>
+            <View style={styles.filterHeader}>
+              <Text style={styles.filterTitle}>Filters</Text>
+              <TouchableOpacity onPress={() => { setTempFilters({ minAge: 18, maxAge: 50, maxDistance: 50 }); }}>
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.filterLabel}>Age range</Text>
+            <View style={styles.filterRow}>
+              <View style={styles.filterInputWrap}>
+                <Text style={styles.filterInputLabel}>Min</Text>
+                <TextInput
+                  style={styles.filterInput}
+                  value={String(tempFilters.minAge)}
+                  onChangeText={v => setTempFilters(f => ({ ...f, minAge: parseInt(v) || 18 }))}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+              <Text style={styles.filterSep}>—</Text>
+              <View style={styles.filterInputWrap}>
+                <Text style={styles.filterInputLabel}>Max</Text>
+                <TextInput
+                  style={styles.filterInput}
+                  value={String(tempFilters.maxAge)}
+                  onChangeText={v => setTempFilters(f => ({ ...f, maxAge: parseInt(v) || 50 }))}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+            </View>
+
+            <Text style={[styles.filterLabel, { marginTop: Spacing.lg }]}>Maximum distance</Text>
+            <View style={styles.distanceOptions}>
+              {[5, 10, 25, 50, 100].map(d => (
+                <TouchableOpacity
+                  key={d}
+                  style={[styles.distanceBtn, tempFilters.maxDistance === d && styles.distanceBtnActive]}
+                  onPress={() => setTempFilters(f => ({ ...f, maxDistance: d }))}
+                >
+                  <Text style={[styles.distanceBtnText, tempFilters.maxDistance === d && styles.distanceBtnTextActive]}>
+                    {d} mi
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
+              <Text style={styles.applyBtnText}>Apply filters</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelFilterBtn} onPress={() => setFilterModal(false)}>
+              <Text style={styles.cancelFilterText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Match modal */}
       <Modal visible={matchModal} transparent animationType="fade">
@@ -152,7 +227,7 @@ export function DiscoverScreen() {
 
       {/* Comment modal */}
       <Modal visible={!!commentModal} transparent animationType="slide">
-        <View style={styles.commentOverlay}>
+        <View style={styles.modalOverlayBottom}>
           <View style={styles.commentCard}>
             <Text style={styles.commentTitle}>Add a note</Text>
             <Text style={styles.commentSub}>What caught your attention? A thoughtful note gets 3× more responses.</Text>
@@ -193,7 +268,7 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
     <View style={styles.card}>
       <View style={styles.photoArea}>
         <Avatar name={profile.first_name} photo={profile.photos?.[0]} size={100} />
-        {profile.salary_verified && (
+        {(profile as any).salary_verified && (
           <View style={styles.verifiedBadge}>
             <Ionicons name="shield-checkmark" size={12} color={Colors.blue} />
             <Text style={styles.verifiedText}>Verified</Text>
@@ -278,6 +353,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   headerEyebrow: { fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
   headerTitle: { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  filterBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  filterBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  filterDot: { position: 'absolute', top: 6, right: 6, width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.primary },
   likesCounter: { alignItems: 'center', backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.lg },
   likesCounterNum: { fontSize: 20, fontWeight: '700', color: Colors.primary },
   likesCounterLabel: { fontSize: 10, color: Colors.primary, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -315,8 +394,30 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 8, letterSpacing: -0.3 },
-  emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  adjustBtn: { backgroundColor: Colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
+  adjustBtnText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalOverlayBottom: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  filterCard: { backgroundColor: Colors.background, borderRadius: Radius.xxl, padding: 24, paddingBottom: 36 },
+  filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  filterTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
+  resetText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
+  filterLabel: { fontSize: 12, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 },
+  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  filterInputWrap: { flex: 1, gap: 6 },
+  filterInputLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
+  filterInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontWeight: '600', color: Colors.text, textAlign: 'center' },
+  filterSep: { fontSize: 18, color: Colors.textTertiary, marginTop: 20 },
+  distanceOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  distanceBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border },
+  distanceBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  distanceBtnText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  distanceBtnTextActive: { color: Colors.primary, fontWeight: '700' },
+  applyBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 14, alignItems: 'center', marginTop: 24 },
+  applyBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  cancelFilterBtn: { alignItems: 'center', marginTop: 12, padding: 10 },
+  cancelFilterText: { fontSize: 14, color: Colors.textSecondary },
   matchCard: { backgroundColor: Colors.background, borderRadius: Radius.xxl, padding: 28, alignItems: 'center', width: '100%' },
   matchIconWrap: { width: 72, height: 72, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
   matchTitle: { fontSize: 26, fontWeight: '700', color: Colors.text, marginBottom: 8, letterSpacing: -0.5 },
@@ -325,7 +426,6 @@ const styles = StyleSheet.create({
   matchBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   keepBtn: { marginTop: 12, padding: 10 },
   keepText: { fontSize: 14, color: Colors.textSecondary },
-  commentOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   commentCard: { backgroundColor: Colors.background, borderRadius: Radius.xxl, padding: 24, paddingBottom: 36 },
   commentTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 6, letterSpacing: -0.3 },
   commentSub: { fontSize: 14, color: Colors.textSecondary, marginBottom: 16, lineHeight: 20 },

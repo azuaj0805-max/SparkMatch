@@ -13,6 +13,21 @@ import { Avatar } from '../../components/Avatar'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { Profile } from '../../types'
 
+function isOnline(lastActive: string | null): boolean {
+  if (!lastActive) return false
+  const diff = Date.now() - new Date(lastActive).getTime()
+  return diff < 5 * 60 * 1000 // online if active within 5 minutes
+}
+
+function getActiveStatus(lastActive: string | null): string {
+  if (!lastActive) return ''
+  const diff = Date.now() - new Date(lastActive).getTime()
+  if (diff < 5 * 60 * 1000) return 'Active now'
+  if (diff < 60 * 60 * 1000) return `Active ${Math.floor(diff / 60000)}m ago`
+  if (diff < 24 * 60 * 60 * 1000) return `Active ${Math.floor(diff / 3600000)}h ago`
+  return `Active ${Math.floor(diff / 86400000)}d ago`
+}
+
 export function MatchesScreen() {
   const { matches, loading } = useMatches()
   const navigation = useNavigation<any>()
@@ -61,7 +76,7 @@ export function MatchesScreen() {
                     >
                       <View style={styles.newMatchAvatarWrap}>
                         <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={56} />
-                        <View style={styles.newMatchDot} />
+                        {isOnline(item.other_user?.last_active) && <View style={styles.onlineDot} />}
                       </View>
                       <Text style={styles.newMatchName} numberOfLines={1}>{item.other_user?.first_name}</Text>
                     </TouchableOpacity>
@@ -80,7 +95,7 @@ export function MatchesScreen() {
                   <Ionicons name="chatbubble-outline" size={36} color={Colors.primary} />
                 </View>
                 <Text style={styles.emptyTitle}>No matches yet</Text>
-                <Text style={styles.emptySub}>Like someone to get started. When you match, you can message each other here.</Text>
+                <Text style={styles.emptySub}>Like someone to get started.</Text>
               </View>
             )}
           </>
@@ -94,9 +109,12 @@ export function MatchesScreen() {
             }}
             activeOpacity={0.7}
           >
-            <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { profile: item.other_user })}>
-              <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={52} />
-            </TouchableOpacity>
+            <View style={styles.avatarWrap}>
+              <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { profile: item.other_user })}>
+                <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={52} />
+              </TouchableOpacity>
+              {isOnline(item.other_user?.last_active) && <View style={styles.onlineDotSmall} />}
+            </View>
             <View style={styles.convoInfo}>
               <View style={styles.convoTopRow}>
                 <Text style={styles.convoName}>{item.other_user?.first_name}</Text>
@@ -149,13 +167,7 @@ export function ChatScreen({ route }: any) {
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.chatHeader}>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-            navigation.goBack()
-          }}
-          style={styles.backBtn}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <TouchableOpacity
@@ -163,10 +175,15 @@ export function ChatScreen({ route }: any) {
           onPress={() => navigation.navigate('ViewProfile', { profile: otherUser })}
           activeOpacity={0.7}
         >
-          <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={38} />
+          <View style={styles.avatarWrap}>
+            <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={38} />
+            {isOnline((otherUser as any).last_active) && <View style={styles.onlineDotSmall} />}
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.chatName}>{otherUser.first_name}</Text>
-            {otherUser.job_title && <Text style={styles.chatSub}>{otherUser.job_title}</Text>}
+            <Text style={styles.chatSub}>
+              {getActiveStatus((otherUser as any).last_active)}
+            </Text>
           </View>
           <View style={styles.viewProfileBtn}>
             <Text style={styles.viewProfileText}>Profile</Text>
@@ -201,16 +218,13 @@ export function ChatScreen({ route }: any) {
               const isMe = item.sender_id === myId
               const prevMsg = messages[index - 1]
               const nextMsg = messages[index + 1]
-              const showAvatar = !isMe && (!nextMsg || nextMsg.sender_id !== item.sender_id)
-              const isFirst = !prevMsg || prevMsg.sender_id !== item.sender_id
               const isLast = !nextMsg || nextMsg.sender_id !== item.sender_id
+              const showAvatar = !isMe && (!nextMsg || nextMsg.sender_id !== item.sender_id)
+              const isRead = isMe && item.read && item.read_at
+              const isLastFromMe = isMe && !messages.slice(index + 1).some(m => m.sender_id === myId)
 
               return (
-                <View style={[
-                  styles.msgRow,
-                  isMe ? styles.msgRowMe : styles.msgRowThem,
-                  { marginBottom: isLast ? 8 : 2 }
-                ]}>
+                <View style={[styles.msgRow, isMe ? styles.msgRowMe : styles.msgRowThem, { marginBottom: isLast ? 8 : 2 }]}>
                   {!isMe && (
                     <View style={styles.msgAvatarWrap}>
                       {showAvatar
@@ -220,22 +234,29 @@ export function ChatScreen({ route }: any) {
                     </View>
                   )}
                   <View style={[styles.msgContent, isMe ? styles.msgContentMe : styles.msgContentThem]}>
-                    <View style={[
-                      styles.bubble,
-                      isMe ? styles.bubbleMe : styles.bubbleThem,
-                      isMe && isFirst && { borderTopRightRadius: 18 },
-                      isMe && isLast && { borderBottomRightRadius: 4 },
-                      !isMe && isFirst && { borderTopLeftRadius: 18 },
-                      !isMe && isLast && { borderBottomLeftRadius: 4 },
-                    ]}>
+                    <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
                       <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>
                         {item.content}
                       </Text>
                     </View>
                     {isLast && (
-                      <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>
-                        {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
+                      <View style={[styles.msgMeta, isMe && styles.msgMetaMe]}>
+                        <Text style={styles.msgTime}>
+                          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        {isMe && isLastFromMe && (
+                          <View style={styles.readReceipt}>
+                            {isRead ? (
+                              <>
+                                <Ionicons name="checkmark-done" size={14} color={Colors.primary} />
+                                <Text style={styles.readText}>Read</Text>
+                              </>
+                            ) : (
+                              <Ionicons name="checkmark" size={14} color={Colors.textTertiary} />
+                            )}
+                          </View>
+                        )}
+                      </View>
                     )}
                   </View>
                 </View>
@@ -276,8 +297,10 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 11, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14, paddingHorizontal: Spacing.xl },
   newMatchItem: { alignItems: 'center', gap: 6, width: 64 },
   newMatchAvatarWrap: { position: 'relative' },
-  newMatchDot: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary, borderWidth: 2, borderColor: Colors.background },
+  onlineDot: { position: 'absolute', bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#22C55E', borderWidth: 2, borderColor: Colors.background },
+  onlineDotSmall: { position: 'absolute', bottom: 1, right: 1, width: 11, height: 11, borderRadius: 6, backgroundColor: '#22C55E', borderWidth: 2, borderColor: Colors.background },
   newMatchName: { fontSize: 11, color: Colors.textSecondary, textAlign: 'center', fontWeight: '500' },
+  avatarWrap: { position: 'relative' },
   convoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   convoInfo: { flex: 1 },
   convoTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
@@ -306,13 +329,16 @@ const styles = StyleSheet.create({
   msgContent: { maxWidth: '72%', gap: 2 },
   msgContentMe: { alignItems: 'flex-end' },
   msgContentThem: { alignItems: 'flex-start' },
-  bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 4 },
-  bubbleMe: { backgroundColor: Colors.primary },
-  bubbleThem: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
+  bubbleMe: { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
+  bubbleThem: { backgroundColor: Colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: Colors.border },
   bubbleText: { fontSize: 15, color: Colors.text, lineHeight: 21 },
   bubbleTextMe: { color: '#fff' },
-  msgTime: { fontSize: 10, color: Colors.textTertiary, marginLeft: 4, marginTop: 2 },
-  msgTimeMe: { marginRight: 4 },
+  msgMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4, marginTop: 2 },
+  msgMetaMe: { justifyContent: 'flex-end', marginRight: 4, marginLeft: 0 },
+  msgTime: { fontSize: 10, color: Colors.textTertiary },
+  readReceipt: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  readText: { fontSize: 10, color: Colors.primary, fontWeight: '500' },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: Spacing.md, paddingBottom: Spacing.lg, borderTopWidth: 1, borderColor: Colors.border },
   chatInput: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, fontSize: 15, color: Colors.text, maxHeight: 100, backgroundColor: Colors.surface },
   sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },

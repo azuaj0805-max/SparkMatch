@@ -2,22 +2,36 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Profile } from '../types'
 import { useAuth } from './useAuth'
+import { getDistanceMiles } from '../lib/distance'
 
 const MAX_LIKES_PER_DAY = 4
 const MAX_CONVERSATIONS = 4
+
+export type DiscoverFilters = {
+  minAge: number
+  maxAge: number
+  maxDistance: number
+}
+
+const DEFAULT_FILTERS: DiscoverFilters = {
+  minAge: 18,
+  maxAge: 50,
+  maxDistance: 50,
+}
 
 export function useDiscover() {
   const { session, profile } = useAuth()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [likesRemaining, setLikesRemaining] = useState(MAX_LIKES_PER_DAY)
+  const [filters, setFilters] = useState<DiscoverFilters>(DEFAULT_FILTERS)
 
   useEffect(() => {
     if (profile) {
       fetchProfiles()
       fetchLikesRemaining()
     }
-  }, [profile])
+  }, [profile, filters])
 
   async function fetchLikesRemaining() {
     if (!session) return
@@ -50,20 +64,41 @@ export function useDiscover() {
 
     const myElo = (profile as any).elo_score ?? 1000
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('profiles')
       .select('*')
       .not('id', 'in', `(${seenIds.join(',') || 'null'})`)
+      .gte('age', filters.minAge)
+      .lte('age', filters.maxAge)
       .limit(50)
 
+    const { data, error } = await query
+
     if (!error && data) {
-      // Sort by Elo proximity to current user
-      const sorted = (data as any[]).sort((a, b) => {
-        const distA = Math.abs((a.elo_score ?? 1000) - myElo)
-        const distB = Math.abs((b.elo_score ?? 1000) - myElo)
+      let filtered = data as Profile[]
+
+      // Filter by distance if user has location
+      if ((profile as any).lat && (profile as any).lng) {
+        filtered = filtered.filter(p => {
+          if (!(p as any).lat || !(p as any).lng) return true
+          const dist = getDistanceMiles(
+            (profile as any).lat,
+            (profile as any).lng,
+            (p as any).lat,
+            (p as any).lng
+          )
+          return dist <= filters.maxDistance
+        })
+      }
+
+      // Sort by Elo proximity
+      const sorted = filtered.sort((a, b) => {
+        const distA = Math.abs(((a as any).elo_score ?? 1000) - myElo)
+        const distB = Math.abs(((b as any).elo_score ?? 1000) - myElo)
         return distA - distB
       })
-      setProfiles(sorted as Profile[])
+
+      setProfiles(sorted)
     }
     setLoading(false)
   }
@@ -155,7 +190,7 @@ export function useDiscover() {
     await updateElo(passedId, true)
   }
 
-  return { profiles, loading, likesRemaining, likeProfile, passProfile, refresh: fetchProfiles }
+  return { profiles, loading, likesRemaining, filters, setFilters, likeProfile, passProfile, refresh: fetchProfiles }
 }
 
 export function useLikesReceived() {
@@ -198,15 +233,8 @@ export function useLikesReceived() {
     setLoading(false)
   }
 
-  function nextLike() {
-    setCurrentIndex(prev => Math.min(prev + 1, likes.length - 1))
-  }
+  function nextLike() { setCurrentIndex(prev => Math.min(prev + 1, likes.length - 1)) }
+  function prevLike() { setCurrentIndex(prev => Math.max(prev - 1, 0)) }
 
-  function prevLike() {
-    setCurrentIndex(prev => Math.max(prev - 1, 0))
-  }
-
-  const currentLike = likes[currentIndex] ?? null
-
-  return { likes, currentLike, currentIndex, count, loading, nextLike, prevLike }
+  return { likes, currentLike: likes[currentIndex] ?? null, currentIndex, count, loading, nextLike, prevLike }
 }

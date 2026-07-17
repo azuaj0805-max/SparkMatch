@@ -11,6 +11,7 @@ export function useMatches() {
   useEffect(() => {
     if (!session) return
     fetchMatches()
+    updateLastActive()
 
     const sub = supabase
       .channel(`matches-${session.user.id}`)
@@ -21,8 +22,22 @@ export function useMatches() {
       }, () => fetchMatches())
       .subscribe()
 
-    return () => { supabase.removeChannel(sub) }
+    // Update last active every 2 minutes
+    const interval = setInterval(updateLastActive, 120000)
+
+    return () => {
+      supabase.removeChannel(sub)
+      clearInterval(interval)
+    }
   }, [session])
+
+  async function updateLastActive() {
+    if (!session) return
+    await supabase
+      .from('profiles')
+      .update({ last_active: new Date().toISOString() })
+      .eq('id', session.user.id)
+  }
 
   async function fetchMatches() {
     if (!session) return
@@ -64,6 +79,8 @@ export function useMessages(matchId: string) {
         filter: `match_id=eq.${matchId}`,
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message])
+        // Mark as read immediately if we're viewing the chat
+        markMessagesAsRead(matchId)
       })
       .subscribe()
 
@@ -77,8 +94,22 @@ export function useMessages(matchId: string) {
       .eq('match_id', matchId)
       .order('created_at', { ascending: true })
 
-    if (!error && data) setMessages(data as Message[])
+    if (!error && data) {
+      setMessages(data as Message[])
+      // Mark all as read when opening chat
+      markMessagesAsRead(matchId)
+    }
     setLoading(false)
+  }
+
+  async function markMessagesAsRead(matchId: string) {
+    if (!session) return
+    await supabase
+      .from('messages')
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq('match_id', matchId)
+      .neq('sender_id', session.user.id)
+      .eq('read', false)
   }
 
   async function sendMessage(content: string) {
