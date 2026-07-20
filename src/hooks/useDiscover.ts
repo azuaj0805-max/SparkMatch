@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { Profile } from '../types'
 import { useAuth } from './useAuth'
 import { getDistanceMiles } from '../lib/distance'
+import { AppState } from 'react-native'
 
 const MAX_LIKES_PER_DAY = 4
-const MAX_CONVERSATIONS = 4
+const MAX_MATCHES = 5
 
 export type DiscoverFilters = {
   minAge: number
@@ -33,8 +34,20 @@ export function useDiscover() {
     }
   }, [profile, filters])
 
+  // Reset likes when app comes back to foreground (handles midnight reset)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        fetchLikesRemaining()
+      }
+    })
+    return () => subscription.remove()
+  }, [session])
+
   async function fetchLikesRemaining() {
     if (!session) return
+    const today = new Date().toISOString().split('T')[0]
+
     const { data } = await supabase
       .from('daily_like_counts')
       .select('*')
@@ -42,12 +55,18 @@ export function useDiscover() {
       .single()
 
     if (data) {
-      const today = new Date().toISOString().split('T')[0]
       if (data.like_date === today) {
         setLikesRemaining(Math.max(0, MAX_LIKES_PER_DAY - data.count))
       } else {
+        // New day — reset the count
+        await supabase
+          .from('daily_like_counts')
+          .update({ like_date: today, count: 0 })
+          .eq('user_id', session.user.id)
         setLikesRemaining(MAX_LIKES_PER_DAY)
       }
+    } else {
+      setLikesRemaining(MAX_LIKES_PER_DAY)
     }
   }
 
@@ -64,7 +83,7 @@ export function useDiscover() {
 
     const myElo = (profile as any).elo_score ?? 1000
 
-    let query = supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .not('id', 'in', `(${seenIds.join(',') || 'null'})`)
@@ -72,26 +91,20 @@ export function useDiscover() {
       .lte('age', filters.maxAge)
       .limit(50)
 
-    const { data, error } = await query
-
     if (!error && data) {
       let filtered = data as Profile[]
 
-      // Filter by distance if user has location
       if ((profile as any).lat && (profile as any).lng) {
         filtered = filtered.filter(p => {
           if (!(p as any).lat || !(p as any).lng) return true
           const dist = getDistanceMiles(
-            (profile as any).lat,
-            (profile as any).lng,
-            (p as any).lat,
-            (p as any).lng
+            (profile as any).lat, (profile as any).lng,
+            (p as any).lat, (p as any).lng
           )
           return dist <= filters.maxDistance
         })
       }
 
-      // Sort by Elo proximity
       const sorted = filtered.sort((a, b) => {
         const distA = Math.abs(((a as any).elo_score ?? 1000) - myElo)
         const distB = Math.abs(((b as any).elo_score ?? 1000) - myElo)
@@ -103,13 +116,13 @@ export function useDiscover() {
     setLoading(false)
   }
 
-  async function checkConversationLimit(): Promise<boolean> {
+  async function checkMatchLimit(): Promise<boolean> {
     if (!session) return false
     const { data } = await supabase
       .from('matches')
       .select('id')
       .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
-    return (data?.length ?? 0) < MAX_CONVERSATIONS
+    return (data?.length ?? 0) < MAX_MATCHES
   }
 
   async function incrementDailyLikes() {
@@ -147,8 +160,8 @@ export function useDiscover() {
     if (!session) return 'liked'
     if (likesRemaining <= 0) return 'no_likes'
 
-    const canConverse = await checkConversationLimit()
-    if (!canConverse) return 'conversation_limit'
+    const canMatch = await checkMatchLimit()
+    if (!canMatch) return 'conversation_limit'
 
     await supabase.from('likes').insert({
       liker_id: session.user.id,

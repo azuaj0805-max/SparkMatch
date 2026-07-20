@@ -13,7 +13,7 @@ import { SkeletonProfileCard } from '../../components/SkeletonCard'
 import { MatchModal } from '../../components/MatchModal'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { Profile, SALARY_BADGE_LABELS } from '../../types'
-import { getDistanceMiles, formatDistance } from '../../lib/distance'
+import { getDistanceMiles, formatDistance, getDistanceLabel } from '../../lib/distance'
 
 export function DiscoverScreen() {
   const { profiles, loading, likesRemaining, filters, setFilters, likeProfile, passProfile } = useDiscover()
@@ -27,12 +27,21 @@ export function DiscoverScreen() {
 
   const currentProfile = profiles[currentIndex]
 
-  function getDistance(profile: Profile): string | null {
-    if (!(myProfile as any)?.lat || !(myProfile as any)?.lng) return null
-    if (!(profile as any).lat || !(profile as any).lng) return null
-    const miles = getDistanceMiles((myProfile as any).lat, (myProfile as any).lng, (profile as any).lat, (profile as any).lng)
-    return formatDistance(miles)
+  function getDistance(profile: Profile): string {
+    return getDistanceLabel(
+      (myProfile as any)?.lat ?? null,
+      (myProfile as any)?.lng ?? null,
+      (profile as any)?.lat ?? null,
+      (profile as any)?.lng ?? null,
+      profile.city
+    )
   }
+
+
+
+
+
+
 
   async function handleLike(profile: Profile) {
     if (likesRemaining <= 0) {

@@ -105,7 +105,7 @@ export function ViewProfileScreen({ route }: any) {
       reported_id: profile.id,
       reason: selectedReason,
       note: reportNote,
-    }).throwOnError().catch(() => {})
+    })
     setSubmitting(false)
     setReportVisible(false)
     Alert.alert('Report submitted', 'Thank you for keeping Meridian safe. We\'ll review this within 24 hours.')

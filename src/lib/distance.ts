@@ -1,8 +1,11 @@
 import * as Location from 'expo-location'
 import { supabase } from './supabase'
 
-export function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 3958.8 // Earth radius in miles
+export function getDistanceMiles(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number
+): number {
+  const R = 3958.8
   const dLat = (lat2 - lat1) * Math.PI / 180
   const dLon = (lon2 - lon1) * Math.PI / 180
   const a =
@@ -16,13 +19,26 @@ export function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2:
 export function formatDistance(miles: number): string {
   if (miles < 1) return 'Less than a mile away'
   if (miles === 1) return '1 mile away'
+  if (miles > 100) return 'Over 100 miles away'
   return `${miles} miles away`
+}
+
+export function getDistanceLabel(
+  myLat: number | null, myLng: number | null,
+  theirLat: number | null, theirLng: number | null,
+  fallbackCity: string | null
+): string {
+  if (myLat && myLng && theirLat && theirLng) {
+    const miles = getDistanceMiles(myLat, myLng, theirLat, theirLng)
+    return formatDistance(miles)
+  }
+  return fallbackCity ?? ''
 }
 
 export async function updateUserLocation(userId: string) {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync()
-    if (status !== 'granted') return
+    if (status !== 'granted') return null
 
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Balanced,
@@ -39,5 +55,6 @@ export async function updateUserLocation(userId: string) {
     return location.coords
   } catch (e) {
     console.log('Location error:', e)
+    return null
   }
 }

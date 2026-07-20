@@ -9,7 +9,6 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useLikesReceived } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
-import { usePhotoUpload } from '../../hooks/usePhotoUpload'
 import { Avatar } from '../../components/Avatar'
 import { InfoRow } from '../../components/InfoRow'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
@@ -18,7 +17,7 @@ import { supabase } from '../../lib/supabase'
 
 export function LikesScreen() {
   const { currentLike, currentIndex, count, loading, nextLike, prevLike } = useLikesReceived()
-  const PREMIUM = false
+  const navigation = useNavigation<any>()
 
   if (loading) {
     return (
@@ -41,23 +40,13 @@ export function LikesScreen() {
           <Text style={styles.headerEyebrow}>Meridian</Text>
           <Text style={styles.headerTitle}>Likes You</Text>
         </View>
-        <View style={styles.countBadge}>
-          <Text style={styles.countBadgeNum}>{count}</Text>
-          <Text style={styles.countBadgeLabel}>people</Text>
-        </View>
-      </View>
-
-      {!PREMIUM && (
-        <View style={styles.upgradeBanner}>
-          <View style={styles.upgradeBannerLeft}>
-            <Text style={styles.upgradeTitle}>Unlock who likes you</Text>
-            <Text style={styles.upgradeSub}>See all {count} people, their salary and career details.</Text>
+        {count > 0 && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeNum}>{count}</Text>
+            <Text style={styles.countBadgeLabel}>people</Text>
           </View>
-          <TouchableOpacity style={styles.upgradeBtn}>
-            <Text style={styles.upgradeBtnText}>$12/mo</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
 
       {count === 0 ? (
         <View style={styles.centered}>
@@ -70,18 +59,35 @@ export function LikesScreen() {
       ) : (
         <View style={styles.queueWrap}>
           <Text style={styles.queueLabel}>{currentIndex + 1} of {count}</Text>
+
           <View style={styles.likeTile}>
-            <View style={[styles.likeTilePhoto, !PREMIUM && styles.blurred]}>
-              <Avatar name={currentLike?.liker?.first_name ?? '?'} photo={PREMIUM ? currentLike?.liker?.photos?.[0] : null} size={130} />
+            <View style={styles.likeTilePhoto}>
+              <Avatar
+                name={currentLike?.liker?.first_name ?? '?'}
+                photo={currentLike?.liker?.photos?.[0]}
+                size={130}
+              />
             </View>
             <View style={styles.likeInfo}>
               <Text style={styles.likeName}>
-                {PREMIUM ? `${currentLike?.liker?.first_name}, ${currentLike?.liker?.age}` : '• • • • •'}
+                {`${currentLike?.liker?.first_name}, ${currentLike?.liker?.age}`}
               </Text>
-              {PREMIUM && currentLike?.liker?.job_title && (
-                <Text style={styles.likeJob}>{currentLike.liker.job_title}</Text>
+              {currentLike?.liker?.job_title && (
+                <View style={styles.likeMetaRow}>
+                  <Ionicons name="briefcase-outline" size={13} color={Colors.textSecondary} />
+                  <Text style={styles.likeJob}>
+                    {currentLike.liker.job_title}
+                    {currentLike.liker.company ? ` · ${currentLike.liker.company}` : ''}
+                  </Text>
+                </View>
               )}
-              {PREMIUM && currentLike?.liker?.salary_range && (
+              {currentLike?.liker?.city && (
+                <View style={styles.likeMetaRow}>
+                  <Ionicons name="location-outline" size={13} color={Colors.textSecondary} />
+                  <Text style={styles.likeJob}>{currentLike.liker.city}</Text>
+                </View>
+              )}
+              {currentLike?.liker?.salary_range && (
                 <View style={styles.likeSalary}>
                   <Ionicons name="trending-up-outline" size={12} color={Colors.green} />
                   <Text style={styles.likeSalaryText}>
@@ -89,13 +95,20 @@ export function LikesScreen() {
                   </Text>
                 </View>
               )}
-              {currentLike?.message && PREMIUM && (
+              {currentLike?.message && (
                 <View style={styles.likeMessage}>
+                  <Ionicons name="chatbubble-outline" size={12} color={Colors.primary} />
                   <Text style={styles.likeMessageText}>"{currentLike.message}"</Text>
                 </View>
               )}
             </View>
           </View>
+
+          <View style={styles.matchLimitNote}>
+            <Ionicons name="information-circle-outline" size={15} color={Colors.textTertiary} />
+            <Text style={styles.matchLimitText}>You can have up to 5 active matches at a time</Text>
+          </View>
+
           <View style={styles.navRow}>
             <TouchableOpacity
               style={[styles.navBtn, currentIndex === 0 && styles.navBtnDisabled]}
@@ -122,20 +135,12 @@ export function LikesScreen() {
 
 export function ProfileScreen() {
   const { profile, signOut } = useAuth()
-  const { pickAndUploadPhoto, deletePhoto, uploading } = usePhotoUpload()
   const navigation = useNavigation<any>()
 
   if (!profile) return null
 
   const salaryLabel = profile.salary_range ? SALARY_BADGE_LABELS[profile.salary_range] : null
   const lookingForLabel = profile.looking_for ? LOOKING_FOR_LABELS[profile.looking_for] : null
-
-  async function handleDeletePhoto(url: string) {
-    Alert.alert('Remove photo', 'Remove this photo from your profile?', [
-      { text: 'Cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deletePhoto(url) },
-    ])
-  }
 
   async function handleDeleteAccount() {
     Alert.alert(
@@ -168,10 +173,7 @@ export function ProfileScreen() {
         </View>
         <TouchableOpacity
           style={styles.editBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-            navigation.navigate('EditProfile')
-          }}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate('EditProfile') }}
         >
           <Ionicons name="pencil-outline" size={14} color={Colors.primary} />
           <Text style={styles.editBtnText}>Edit</Text>
@@ -179,8 +181,6 @@ export function ProfileScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScroll}>
-
-        {/* Hero */}
         <View style={styles.profileHero}>
           <Avatar name={profile.first_name} photo={profile.photos?.[0]} size={76} />
           <View style={{ flex: 1 }}>
@@ -198,7 +198,6 @@ export function ProfileScreen() {
           </View>
         </View>
 
-        {/* Photos */}
         {(profile.photos ?? []).length > 0 ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Photos</Text>
@@ -224,7 +223,6 @@ export function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Career */}
         {(profile.job_title || profile.industry) && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Career</Text>
@@ -233,7 +231,6 @@ export function ProfileScreen() {
           </View>
         )}
 
-        {/* Dating preferences */}
         {lookingForLabel && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Dating preferences</Text>
@@ -243,7 +240,6 @@ export function ProfileScreen() {
           </View>
         )}
 
-        {/* Work style */}
         {profile.work_style?.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Work style</Text>
@@ -257,7 +253,6 @@ export function ProfileScreen() {
           </View>
         )}
 
-        {/* Prompts */}
         {profile.prompts?.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Prompts</Text>
@@ -270,14 +265,13 @@ export function ProfileScreen() {
           </View>
         )}
 
-        {/* Account */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Account</Text>
           <AccountRow icon="pencil-outline" label="Edit profile & photos" onPress={() => navigation.navigate('EditProfile')} />
-          <AccountRow icon="ban-outline" label="Block or report someone" onPress={() => Alert.alert('Block or report', 'Open a match or conversation, tap their name to view their profile, then tap ⋯ to block or report.')} />
+          <AccountRow icon="document-text-outline" label="Privacy Policy" onPress={() => navigation.navigate('Legal', { type: 'privacy' })} />
+          <AccountRow icon="reader-outline" label="Terms of Service" onPress={() => navigation.navigate('Legal', { type: 'terms' })} />
+          <AccountRow icon="ban-outline" label="Block or report someone" onPress={() => Alert.alert('Block or report', 'Open a match, tap their name, then tap ⋯ to block or report.')} />
           <AccountRow icon="log-out-outline" label="Sign out" onPress={() => Alert.alert('Sign out', 'Are you sure?', [{ text: 'Cancel' }, { text: 'Sign out', style: 'destructive', onPress: signOut }])} />
-          <AccountRow icon="document-text-outline" label="Privacy Policy" onPress={() => navigation.navigate("Legal", { type: "privacy" })} />
-          <AccountRow icon="reader-outline" label="Terms of Service" onPress={() => navigation.navigate("Legal", { type: "terms" })} />
           <AccountRow icon="trash-outline" label="Delete account" onPress={handleDeleteAccount} danger last />
         </View>
 
@@ -314,25 +308,21 @@ const styles = StyleSheet.create({
   emptyIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 8, letterSpacing: -0.3 },
   emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-  upgradeBanner: { margin: Spacing.lg, padding: Spacing.lg, borderRadius: Radius.xl, backgroundColor: Colors.navy, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  upgradeBannerLeft: { flex: 1 },
-  upgradeTitle: { fontSize: 14, fontWeight: '700', color: '#fff', marginBottom: 3 },
-  upgradeSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 17 },
-  upgradeBtn: { backgroundColor: Colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full },
-  upgradeBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-  queueWrap: { flex: 1, padding: Spacing.xl, alignItems: 'center' },
-  queueLabel: { fontSize: 12, color: Colors.textTertiary, marginBottom: 16, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.5 },
-  likeTile: { width: '100%', backgroundColor: Colors.background, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden', marginBottom: 16 },
+  queueWrap: { flex: 1, padding: Spacing.xl, gap: 14 },
+  queueLabel: { fontSize: 12, color: Colors.textTertiary, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
+  likeTile: { backgroundColor: Colors.background, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
   likeTilePhoto: { height: 300, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
-  blurred: { opacity: 0.08 },
-  likeInfo: { padding: Spacing.lg, gap: 6 },
+  likeInfo: { padding: Spacing.lg, gap: 8 },
   likeName: { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
+  likeMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   likeJob: { fontSize: 14, color: Colors.textSecondary },
   likeSalary: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: Colors.greenLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.greenBorder },
   likeSalaryText: { fontSize: 12, fontWeight: '600', color: Colors.green },
-  likeMessage: { backgroundColor: Colors.primaryLight, borderRadius: Radius.md, padding: 12 },
-  likeMessageText: { fontSize: 13, color: Colors.primary, fontStyle: 'italic', lineHeight: 19 },
-  navRow: { flexDirection: 'row', gap: 10, width: '100%' },
+  likeMessage: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: Colors.primaryLight, borderRadius: Radius.md, padding: 12 },
+  likeMessageText: { fontSize: 13, color: Colors.primary, fontStyle: 'italic', lineHeight: 19, flex: 1 },
+  matchLimitNote: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.surface, padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },
+  matchLimitText: { fontSize: 12, color: Colors.textTertiary, flex: 1 },
+  navRow: { flexDirection: 'row', gap: 10 },
   navBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border },
   navBtnPrimary: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   navBtnDisabled: { opacity: 0.3 },

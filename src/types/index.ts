@@ -13,6 +13,12 @@ export type Profile = {
   salary_range: SalaryRange | null
   total_comp: string | null
   work_style: string[]
+  last_active: string | null
+  elo_score: number
+  is_boosted: boolean
+  boost_expires_at: string | null
+  lat: number | null
+  lng: number | null
   five_year_goal: string | null
   salary_verified: boolean
   gender: string | null
@@ -28,8 +34,6 @@ export type Profile = {
   smoking: string | null
   religion: string | null
   prompts: Prompt[]
-  lat: number | null
-  lng: number | null
 }
 
 export type Prompt = {
@@ -63,6 +67,7 @@ export type Message = {
   sender_id: string
   content: string
   read: boolean
+  read_at: string | null
 }
 
 export type SalaryRange =

@@ -77,7 +77,7 @@ export function MatchesScreen() {
                     >
                       <View style={styles.newMatchAvatarWrap}>
                         <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={56} />
-                        {isOnline(item.other_user?.last_active) && <View style={styles.onlineDot} />}
+                        {isOnline(item.other_user?.last_active ?? null) && <View style={styles.onlineDot} />}
                       </View>
                       <Text style={styles.newMatchName} numberOfLines={1}>{item.other_user?.first_name}</Text>
                     </TouchableOpacity>
@@ -114,7 +114,7 @@ export function MatchesScreen() {
               <TouchableOpacity onPress={() => navigation.navigate('ViewProfile', { profile: item.other_user })}>
                 <Avatar name={item.other_user?.first_name ?? '?'} photo={item.other_user?.photos?.[0]} size={52} />
               </TouchableOpacity>
-              {isOnline(item.other_user?.last_active) && <View style={styles.onlineDotSmall} />}
+              {isOnline(item.other_user?.last_active ?? null) && <View style={styles.onlineDotSmall} />}
             </View>
             <View style={styles.convoInfo}>
               <View style={styles.convoTopRow}>
@@ -178,7 +178,7 @@ export function ChatScreen({ route }: any) {
         >
           <View style={styles.avatarWrap}>
             <Avatar name={otherUser.first_name} photo={otherUser.photos?.[0]} size={38} />
-            {isOnline((otherUser as any).last_active) && <View style={styles.onlineDotSmall} />}
+            {isOnline((otherUser as any).last_active ?? null) && <View style={styles.onlineDotSmall} />}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.chatName}>{otherUser.first_name}</Text>
