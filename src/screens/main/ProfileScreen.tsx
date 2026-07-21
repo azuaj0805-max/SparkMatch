@@ -23,7 +23,6 @@ export function LikesScreen() {
     return (
       <SafeAreaView style={GlobalStyles.safeArea}>
         <View style={styles.header}>
-          <Text style={styles.headerEyebrow}>Meridian</Text>
           <Text style={styles.headerTitle}>Likes You</Text>
         </View>
         <View style={styles.centered}>
@@ -37,7 +36,6 @@ export function LikesScreen() {
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerEyebrow}>Meridian</Text>
           <Text style={styles.headerTitle}>Likes You</Text>
         </View>
         {count > 0 && (
@@ -168,7 +166,6 @@ export function ProfileScreen() {
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerEyebrow}>Meridian</Text>
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
         <TouchableOpacity
@@ -300,7 +297,7 @@ function AccountRow({ icon, label, onPress, danger, last }: { icon: string; labe
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   headerEyebrow: { fontSize: 11, fontFamily: "DMSans_700Bold", color: Colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
-  headerTitle: { fontSize: 22, fontFamily: "DMSans_700Bold", color: Colors.text, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 28, fontFamily: "DMSans_700Bold", color: Colors.text, letterSpacing: -0.5 },
   countBadge: { alignItems: 'center', backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.lg },
   countBadgeNum: { fontSize: 20, fontFamily: "DMSans_700Bold", color: Colors.primary },
   countBadgeLabel: { fontSize: 10, color: Colors.primary, fontFamily: "DMSans_500Medium", textTransform: 'uppercase', letterSpacing: 0.5 },

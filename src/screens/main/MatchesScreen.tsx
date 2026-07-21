@@ -47,7 +47,6 @@ export function MatchesScreen() {
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.headerEyebrow}>Meridian</Text>
         <Text style={styles.headerTitle}>Matches</Text>
       </View>
 
@@ -294,7 +293,7 @@ export function ChatScreen({ route }: any) {
 const styles = StyleSheet.create({
   header: { paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   headerEyebrow: { fontSize: 11, fontFamily: "DMSans_700Bold", color: Colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
-  headerTitle: { fontSize: 22, fontFamily: "DMSans_700Bold", color: Colors.text, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 28, fontFamily: "DMSans_700Bold", color: Colors.text, letterSpacing: -0.5 },
   section: { paddingTop: Spacing.xl, paddingBottom: Spacing.md },
   sectionHeader: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
   sectionTitle: { fontSize: 11, fontFamily: "DMSans_700Bold", color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14, paddingHorizontal: Spacing.xl },
