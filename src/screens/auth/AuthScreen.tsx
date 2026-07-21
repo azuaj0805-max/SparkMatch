@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   sub: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 32 },
   form: { gap: Spacing.lg, marginBottom: Spacing.xl },
   inputWrap: { gap: 8 },
-  inputLabel: { fontSize: 13, fontWeight: '600', color: Colors.text, marginLeft: 2 },
+  inputLabel: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: Colors.text, marginLeft: 2 },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1, borderColor: Colors.border,
@@ -176,9 +176,9 @@ const styles = StyleSheet.create({
     paddingVertical: 15, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4,
   },
-  submitText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+  submitText: { color: '#fff', fontSize: 16, fontFamily: "DMSans_700Bold", letterSpacing: 0.2 },
   switchBtn: { alignItems: 'center', marginBottom: Spacing.lg },
   switchText: { fontSize: 14, color: Colors.textSecondary },
-  switchLink: { color: Colors.primary, fontWeight: '700' },
+  switchLink: { color: Colors.primary, fontFamily: "DMSans_700Bold" },
   legal: { fontSize: 11, color: Colors.textTertiary, textAlign: 'center', lineHeight: 16 },
 })

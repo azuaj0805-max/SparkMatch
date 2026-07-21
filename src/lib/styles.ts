@@ -1,29 +1,16 @@
 import { StyleSheet } from 'react-native'
 
 export const Colors = {
-  // Brand
   primary:       '#6E8CFF',
   primaryLight:  '#EEF1FF',
   primaryDark:   '#4A6AE8',
-
-  // Dark navy
   navy:          '#101E3B',
   navyLight:     '#1C2D52',
-
-  // Supporting
   green:         '#2D7A5F',
   greenLight:    '#E0F2EA',
   greenBorder:   '#A8D4BC',
   blue:          '#3A6EA8',
   blueLight:     '#E0EAF5',
-  purple:        '#534AB7',
-  purpleLight:   '#EEEDFE',
-  amber:         '#854F0B',
-  amberLight:    '#FAEEDA',
-  pink:          '#993556',
-  pinkLight:     '#FBEAF0',
-
-  // Neutrals
   text:          '#101E3B',
   textSecondary: '#4A5568',
   textTertiary:  '#8896AB',
@@ -32,8 +19,6 @@ export const Colors = {
   surface:       '#F4F6FF',
   surfaceAlt:    '#F8F9FC',
   background:    '#FFFFFF',
-
-  // Status
   danger:        '#E53E3E',
   dangerLight:   '#FFF5F5',
 }
@@ -44,6 +29,13 @@ export const Spacing = {
 
 export const Radius = {
   sm: 6, md: 10, lg: 14, xl: 20, xxl: 28, full: 999,
+}
+
+export const Font = {
+  regular:  'DMSans_400Regular',
+  medium:   'DMSans_500Medium',
+  semibold: 'DMSans_600SemiBold',
+  bold:     'DMSans_700Bold',
 }
 
 export const GlobalStyles = StyleSheet.create({
@@ -61,7 +53,7 @@ export const GlobalStyles = StyleSheet.create({
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'DMSans_600SemiBold',
     letterSpacing: 0.3,
   },
   secondaryButton: {
@@ -76,7 +68,7 @@ export const GlobalStyles = StyleSheet.create({
   secondaryButtonText: {
     color: Colors.text,
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'DMSans_500Medium',
   },
   input: {
     borderWidth: 1,
@@ -85,6 +77,7 @@ export const GlobalStyles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: 14,
     fontSize: 15,
+    fontFamily: 'DMSans_400Regular',
     color: Colors.text,
     backgroundColor: Colors.background,
   },
