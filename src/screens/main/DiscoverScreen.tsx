@@ -1,19 +1,22 @@
 import React, { useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Modal, TextInput, Alert, ScrollView,
+  Modal, TextInput, Alert, ScrollView, Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
 import * as Haptics from 'expo-haptics'
 import { useDiscover, DiscoverFilters } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
-import { Avatar } from '../../components/Avatar'
 import { SkeletonProfileCard } from '../../components/SkeletonCard'
 import { MatchModal } from '../../components/MatchModal'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { Profile, SALARY_BADGE_LABELS } from '../../types'
-import { getDistanceMiles, formatDistance, getDistanceLabel } from '../../lib/distance'
+import { getDistanceLabel } from '../../lib/distance'
+
+const { width } = Dimensions.get('window')
+const CARD_WIDTH = width - Spacing.lg * 2
 
 export function DiscoverScreen() {
   const { profiles, loading, likesRemaining, filters, setFilters, likeProfile, passProfile } = useDiscover()
@@ -29,19 +32,13 @@ export function DiscoverScreen() {
 
   function getDistance(profile: Profile): string {
     return getDistanceLabel(
-      (myProfile as any)?.lat ?? null,
-      (myProfile as any)?.lng ?? null,
-      (profile as any)?.lat ?? null,
-      (profile as any)?.lng ?? null,
+      myProfile?.lat ?? null,
+      myProfile?.lng ?? null,
+      profile.lat ?? null,
+      profile.lng ?? null,
       profile.city
     )
   }
-
-
-
-
-
-
 
   async function handleLike(profile: Profile) {
     if (likesRemaining <= 0) {
@@ -55,7 +52,7 @@ export function DiscoverScreen() {
     if (result === 'match') setMatchModal(true)
     if (result === 'conversation_limit') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-      Alert.alert('Conversation limit', 'You can only have 4 active conversations at a time.')
+      Alert.alert('Match limit reached', 'You can have up to 5 active matches at a time. Unmatch someone to like new people.')
     }
   }
 
@@ -86,10 +83,7 @@ export function DiscoverScreen() {
   return (
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerEyebrow}>Meridian</Text>
-          <Text style={styles.headerTitle}>Discover</Text>
-        </View>
+        <Text style={styles.headerTitle}>Meridian</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={[styles.filterBtn, filtersActive && styles.filterBtnActive]}
@@ -139,7 +133,6 @@ export function DiscoverScreen() {
         )}
       </ScrollView>
 
-      {/* Match modal */}
       <MatchModal
         visible={matchModal}
         onSendMessage={() => setMatchModal(false)}
@@ -235,36 +228,42 @@ export function DiscoverScreen() {
 
 function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemaining }: {
   profile: Profile
-  distance: string | null
+  distance: string
   onLike: () => void
   onPass: () => void
   onComment: () => void
   likesRemaining: number
 }) {
   const salaryLabel = profile.salary_range ? SALARY_BADGE_LABELS[profile.salary_range] : null
+  const hasPhoto = profile.photos?.length > 0
 
   return (
     <View style={styles.card}>
-      <View style={styles.photoArea}>
-        <Avatar name={profile.first_name} photo={profile.photos?.[0]} size={100} />
-        {(profile as any).salary_verified && (
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="shield-checkmark" size={12} color={Colors.blue} />
-            <Text style={styles.verifiedText}>Verified</Text>
+
+      {/* Full width photo */}
+      <View style={styles.photoWrap}>
+        {hasPhoto ? (
+          <Image
+            source={{ uri: profile.photos[0] }}
+            style={styles.photo}
+            contentFit="cover"
+            transition={200}
+          />
+        ) : (
+          <View style={styles.photoPlaceholder}>
+            <View style={styles.initials}>
+              <Text style={styles.initialsText}>{profile.first_name[0]}</Text>
+            </View>
           </View>
         )}
-      </View>
 
-      <View style={styles.cardBody}>
-        <View style={styles.nameRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{profile.first_name}, {profile.age}</Text>
-            <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={12} color={Colors.textTertiary} />
-              <Text style={styles.meta}>
-                {distance ?? profile.city}
-                {profile.job_title ? `  ·  ${profile.job_title}` : ''}
-              </Text>
+        {/* Gradient overlay with name */}
+        <View style={styles.photoOverlay}>
+          <View style={styles.nameBlock}>
+            <Text style={styles.photoName}>{profile.first_name}, {profile.age}</Text>
+            <View style={styles.photoMeta}>
+              <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.photoMetaText}>{distance}</Text>
             </View>
           </View>
           {salaryLabel && (
@@ -275,42 +274,75 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
           )}
         </View>
 
-        {(profile.industry || (profile.work_style?.length > 0)) && (
-          <View style={styles.tagRow}>
-            {profile.industry && <Tag label={profile.industry} />}
-            {profile.work_style?.slice(0, 1).map(w => <Tag key={w} label={w} />)}
-          </View>
-        )}
-
-        {profile.prompts?.slice(0, 1).map((p, i) => (
-          <View key={i} style={styles.promptBox}>
-            <Text style={styles.promptLabel}>{p.question}</Text>
-            <Text style={styles.promptAnswer}>{p.answer}</Text>
-          </View>
-        ))}
-
-        {profile.looking_for && profile.looking_for !== 'private' && (
-          <View style={styles.goalRow}>
-            <Ionicons name="flag-outline" size={13} color={Colors.primary} />
-            <Text style={styles.goalText}>
-              {profile.looking_for === 'serious' ? 'Looking for something serious'
-                : profile.looking_for === 'open' ? 'Open to anything'
-                : 'Casual dating'}
-            </Text>
+        {profile.salary_verified && (
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="shield-checkmark" size={12} color={Colors.blue} />
+            <Text style={styles.verifiedText}>Verified</Text>
           </View>
         )}
       </View>
 
+      {/* Career block */}
+      {(profile.job_title || profile.industry) && (
+        <View style={styles.block}>
+          <View style={styles.blockIcon}>
+            <Ionicons name="briefcase-outline" size={16} color={Colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            {profile.job_title && (
+              <Text style={styles.blockTitle}>
+                {profile.job_title}{profile.company ? ` at ${profile.company}` : ''}
+              </Text>
+            )}
+            {profile.industry && <Text style={styles.blockSub}>{profile.industry}</Text>}
+          </View>
+        </View>
+      )}
+
+      {/* Tags */}
+      {profile.work_style?.length > 0 && (
+        <View style={styles.tagBlock}>
+          {profile.work_style.slice(0, 3).map(w => (
+            <View key={w} style={styles.tag}>
+              <Text style={styles.tagText}>{w}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Prompts */}
+      {profile.prompts?.slice(0, 1).map((p, i) => (
+        <View key={i} style={styles.promptBlock}>
+          <Text style={styles.promptQ}>{p.question}</Text>
+          <Text style={styles.promptA}>{p.answer}</Text>
+        </View>
+      ))}
+
+      {/* Looking for */}
+      {profile.looking_for && profile.looking_for !== 'private' && (
+        <View style={styles.block}>
+          <View style={styles.blockIcon}>
+            <Ionicons name="flag-outline" size={16} color={Colors.primary} />
+          </View>
+          <Text style={styles.blockTitle}>
+            {profile.looking_for === 'serious' ? 'Looking for something serious'
+              : profile.looking_for === 'open' ? 'Open to anything'
+              : 'Casual dating'}
+          </Text>
+        </View>
+      )}
+
+      {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.passBtn} onPress={onPass} activeOpacity={0.7}>
-          <Ionicons name="close" size={24} color={Colors.textSecondary} />
+          <Ionicons name="close" size={26} color={Colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.likeBtn, likesRemaining <= 0 && styles.likeBtnDisabled]}
           onPress={onLike}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
         >
-          <Ionicons name="heart" size={28} color="#fff" />
+          <Ionicons name="heart" size={30} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.commentBtn} onPress={onComment} activeOpacity={0.7}>
           <Ionicons name="chatbubble-outline" size={22} color={Colors.primary} />
@@ -320,18 +352,9 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
   )
 }
 
-function Tag({ label }: { label: string }) {
-  return (
-    <View style={styles.tag}>
-      <Text style={styles.tagText}>{label}</Text>
-    </View>
-  )
-}
-
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
-  headerEyebrow: { fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   filterBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   filterBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
@@ -343,35 +366,59 @@ const styles = StyleSheet.create({
   limitText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
   scrollContent: { padding: Spacing.lg, paddingBottom: 100 },
   card: { backgroundColor: Colors.background, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
-  photoArea: { height: 300, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+
+  // Photo
+  photoWrap: { width: '100%', height: width * 1.1, position: 'relative' },
+  photo: { width: '100%', height: '100%' },
+  photoPlaceholder: { width: '100%', height: '100%', backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  initials: { width: 100, height: 100, borderRadius: 50, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  initialsText: { fontSize: 40, fontWeight: '700', color: Colors.primary },
+  photoOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  nameBlock: { flex: 1 },
+  photoName: { fontSize: 26, fontWeight: '700', color: '#fff', letterSpacing: -0.5, marginBottom: 4 },
+  photoMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  photoMetaText: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+  salaryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.greenLight, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.greenBorder },
+  salaryBadgeText: { fontSize: 12, fontWeight: '600', color: Colors.green },
   verifiedBadge: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.blueLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
   verifiedText: { fontSize: 11, color: Colors.blue, fontWeight: '600' },
-  cardBody: { padding: Spacing.lg, gap: Spacing.md },
-  nameRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  name: { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  meta: { fontSize: 13, color: Colors.textTertiary },
-  salaryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.greenLight, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.greenBorder },
-  salaryBadgeText: { fontSize: 12, fontWeight: '600', color: Colors.green },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, backgroundColor: Colors.primaryLight },
-  tagText: { fontSize: 12, color: Colors.primary, fontWeight: '500' },
-  promptBox: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: 12, borderWidth: 1, borderColor: Colors.border },
-  promptLabel: { fontSize: 10, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 },
-  promptAnswer: { fontSize: 14, color: Colors.text, lineHeight: 20 },
-  goalRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  goalText: { fontSize: 13, color: Colors.textSecondary },
+
+  // Content blocks
+  block: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.lg, borderTopWidth: 1, borderColor: Colors.border },
+  blockIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  blockTitle: { fontSize: 15, fontWeight: '600', color: Colors.text },
+  blockSub: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  tagBlock: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderTopWidth: 1, borderColor: Colors.border },
+  tag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: Colors.primaryLight },
+  tagText: { fontSize: 13, color: Colors.primary, fontWeight: '500' },
+  promptBlock: { padding: Spacing.lg, borderTopWidth: 1, borderColor: Colors.border, gap: 6 },
+  promptQ: { fontSize: 12, fontWeight: '700', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6 },
+  promptA: { fontSize: 16, color: Colors.text, lineHeight: 22, fontWeight: '500' },
+
+  // Actions
   actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 20, padding: Spacing.xl, borderTopWidth: 1, borderColor: Colors.border },
   passBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
-  likeBtn: { width: 70, height: 70, borderRadius: 35, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  likeBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   likeBtnDisabled: { backgroundColor: Colors.borderDark },
-  commentBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryLight },
+  commentBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+
+  // Empty
   empty: { alignItems: 'center', justifyContent: 'center', padding: 40, paddingTop: 80 },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 8, letterSpacing: -0.3 },
   emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
   adjustBtn: { backgroundColor: Colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
   adjustBtnText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
+
+  // Modals
   modalOverlayBottom: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   filterCard: { backgroundColor: Colors.background, borderRadius: Radius.xxl, padding: 24, paddingBottom: 36 },
   filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
