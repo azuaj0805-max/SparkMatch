@@ -77,18 +77,67 @@ function RootNavigator() {
   if (loading) return null
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationDuration: 250,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        contentStyle: { backgroundColor: Colors.background },
+      }}
+    >
       {!session ? (
-        <Stack.Screen name="Auth" component={AuthScreen} />
+        <Stack.Screen
+          name="Auth"
+          component={AuthScreen}
+          options={{ animation: 'fade' }}
+        />
       ) : !profile ? (
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen
+          name="Onboarding"
+          component={OnboardingScreen}
+          options={{ animation: 'fade' }}
+        />
       ) : (
         <>
-          <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="Chat" component={ChatScreen} />
-          <Stack.Screen name="ViewProfile" component={ViewProfileScreen} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-          <Stack.Screen name="Legal" component={LegalScreen} />
+          <Stack.Screen
+            name="Main"
+            component={MainTabs}
+            options={{ animation: 'fade' }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{
+              animation: 'slide_from_right',
+              animationDuration: 200,
+            }}
+          />
+          <Stack.Screen
+            name="ViewProfile"
+            component={ViewProfileScreen}
+            options={{
+              animation: 'slide_from_bottom',
+              animationDuration: 300,
+            }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{
+              animation: 'slide_from_bottom',
+              animationDuration: 300,
+            }}
+          />
+          <Stack.Screen
+            name="Legal"
+            component={LegalScreen}
+            options={{
+              animation: 'slide_from_right',
+              animationDuration: 200,
+            }}
+          />
         </>
       )}
     </Stack.Navigator>
@@ -109,7 +158,7 @@ const tabStyles = StyleSheet.create({
   bar: {
     backgroundColor: Colors.background,
     borderTopWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E8ECF4',
     paddingBottom: 20,
     paddingTop: 8,
     paddingHorizontal: 8,
@@ -117,7 +166,7 @@ const tabStyles = StyleSheet.create({
   },
   tabBtn: { flex: 1, alignItems: 'center', gap: 3 },
   iconWrap: { width: 44, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 17 },
-  iconWrapActive: { backgroundColor: Colors.primaryLight },
-  label: { fontSize: 10, color: Colors.textTertiary, fontWeight: '500' },
-  labelActive: { color: Colors.primary, fontWeight: '700' },
+  iconWrapActive: { backgroundColor: '#EEF1FF' },
+  label: { fontSize: 10, color: '#8896AB', fontFamily: 'DMSans_500Medium' },
+  labelActive: { color: '#6E8CFF', fontFamily: 'DMSans_700Bold' },
 })
