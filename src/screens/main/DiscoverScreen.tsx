@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   promptBlock: { padding: Spacing.lg, borderTopWidth: 1, borderColor: Colors.border, gap: 6 },
   promptQ: { fontSize: 12, fontFamily: 'DMSans_700Bold', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6 },
   promptA: { fontSize: 16, color: Colors.text, lineHeight: 22, fontFamily: 'DMSans_500Medium' },
-  actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 20, padding: Spacing.xl, borderTopWidth: 1, borderColor: Colors.border },
+  actions: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 24, padding: Spacing.xl, borderTopWidth: 1, borderColor: Colors.border },
   passBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
   likeBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   likeBtnDisabled: { backgroundColor: Colors.borderDark },
