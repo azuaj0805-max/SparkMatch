@@ -11,7 +11,7 @@ import { supabase } from '../../lib/supabase'
 import { WelcomeScreen } from './WelcomeScreen'
 import { Colors, Spacing, Radius } from '../../lib/styles'
 
-type Mode = 'welcome' | 'signup' | 'signin' | 'confirm'
+type Mode = 'welcome' | 'signup' | 'signin'
 
 export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('welcome')
@@ -26,11 +26,7 @@ export function AuthScreen() {
     setLoading(true)
     const { error } = await supabase.auth.signUp({ email, password })
     setLoading(false)
-    if (error) {
-      Alert.alert('Sign up failed', error.message)
-    } else {
-      setMode('confirm')
-    }
+    if (error) Alert.alert('Sign up failed', error.message)
   }
 
   async function handleSignIn() {
@@ -41,66 +37,12 @@ export function AuthScreen() {
     if (error) Alert.alert('Sign in failed', error.message)
   }
 
-  async function handleResendEmail() {
-    setLoading(true)
-    const { error } = await supabase.auth.resend({ type: 'signup', email })
-    setLoading(false)
-    if (error) {
-      Alert.alert('Error', error.message)
-    } else {
-      Alert.alert('Email sent', 'Check your inbox for the confirmation link.')
-    }
-  }
-
   if (mode === 'welcome') {
     return (
       <WelcomeScreen
         onGetStarted={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMode('signup') }}
         onSignIn={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMode('signin') }}
       />
-    )
-  }
-
-  if (mode === 'confirm') {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.confirmWrap}>
-          <View style={styles.confirmIconWrap}>
-            <Ionicons name="mail-outline" size={40} color={Colors.primary} />
-          </View>
-          <Text style={styles.confirmTitle}>Check your email</Text>
-          <Text style={styles.confirmSub}>
-            We sent a confirmation link to{'\n'}
-            <Text style={styles.confirmEmail}>{email}</Text>
-          </Text>
-          <Text style={styles.confirmNote}>
-            Click the link in the email to confirm your account, then come back and sign in.
-          </Text>
-
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={() => setMode('signin')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryBtnText}>Go to sign in</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={handleResendEmail}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color={Colors.primary} size="small" />
-              : <Text style={styles.secondaryBtnText}>Resend confirmation email</Text>
-            }
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.backLink} onPress={() => setMode('signup')}>
-            <Text style={styles.backLinkText}>← Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
     )
   }
 
@@ -227,18 +169,4 @@ const styles = StyleSheet.create({
   switchText: { fontSize: 14, color: Colors.textSecondary },
   switchLink: { color: Colors.primary, fontFamily: 'DMSans_700Bold' },
   legal: { fontSize: 11, color: Colors.textTertiary, textAlign: 'center', lineHeight: 16 },
-
-  // Confirm screen
-  confirmWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 },
-  confirmIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  confirmTitle: { fontSize: 28, fontFamily: 'DMSans_700Bold', color: Colors.text, letterSpacing: -0.5, textAlign: 'center' },
-  confirmSub: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24 },
-  confirmEmail: { fontFamily: 'DMSans_600SemiBold', color: Colors.text },
-  confirmNote: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, backgroundColor: Colors.surface, padding: Spacing.lg, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border },
-  primaryBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 15, paddingHorizontal: 32, alignItems: 'center', width: '100%', marginTop: 8 },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontFamily: 'DMSans_700Bold' },
-  secondaryBtn: { paddingVertical: 13, alignItems: 'center', width: '100%' },
-  secondaryBtnText: { fontSize: 14, color: Colors.primary, fontFamily: 'DMSans_600SemiBold' },
-  backLink: { padding: 10 },
-  backLinkText: { fontSize: 14, color: Colors.textSecondary },
 })
