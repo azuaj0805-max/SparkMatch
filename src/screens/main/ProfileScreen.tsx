@@ -4,9 +4,9 @@ import {
   Alert, Image, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import { useNavigation } from "@react-navigation/native"
 import { useLikesReceived } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../../components/Avatar'
@@ -58,7 +58,7 @@ export function LikesScreen() {
         <View style={styles.queueWrap}>
           <Text style={styles.queueLabel}>{currentIndex + 1} of {count}</Text>
 
-          <View style={styles.likeTile}>
+          <TouchableOpacity style={styles.likeTile} onPress={() => currentLike?.liker && navigation.navigate("ViewProfile", { profile: currentLike.liker })} activeOpacity={0.85}>
             <View style={styles.likeTilePhoto}>
               <Avatar
                 name={currentLike?.liker?.first_name ?? '?'}
@@ -100,7 +100,7 @@ export function LikesScreen() {
                 </View>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.matchLimitNote}>
             <Ionicons name="information-circle-outline" size={15} color={Colors.textTertiary} />

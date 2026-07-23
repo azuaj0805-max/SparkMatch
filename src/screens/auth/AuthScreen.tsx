@@ -9,9 +9,9 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { supabase } from '../../lib/supabase'
 import { WelcomeScreen } from './WelcomeScreen'
-import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
+import { Colors, Spacing, Radius } from '../../lib/styles'
 
-type Mode = 'welcome' | 'signup' | 'signin'
+type Mode = 'welcome' | 'signup' | 'signin' | 'confirm'
 
 export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('welcome')
@@ -26,7 +26,11 @@ export function AuthScreen() {
     setLoading(true)
     const { error } = await supabase.auth.signUp({ email, password })
     setLoading(false)
-    if (error) Alert.alert('Sign up failed', error.message)
+    if (error) {
+      Alert.alert('Sign up failed', error.message)
+    } else {
+      setMode('confirm')
+    }
   }
 
   async function handleSignIn() {
@@ -35,6 +39,17 @@ export function AuthScreen() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) Alert.alert('Sign in failed', error.message)
+  }
+
+  async function handleResendEmail() {
+    setLoading(true)
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    setLoading(false)
+    if (error) {
+      Alert.alert('Error', error.message)
+    } else {
+      Alert.alert('Email sent', 'Check your inbox for the confirmation link.')
+    }
   }
 
   if (mode === 'welcome') {
@@ -46,12 +61,54 @@ export function AuthScreen() {
     )
   }
 
+  if (mode === 'confirm') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.confirmWrap}>
+          <View style={styles.confirmIconWrap}>
+            <Ionicons name="mail-outline" size={40} color={Colors.primary} />
+          </View>
+          <Text style={styles.confirmTitle}>Check your email</Text>
+          <Text style={styles.confirmSub}>
+            We sent a confirmation link to{'\n'}
+            <Text style={styles.confirmEmail}>{email}</Text>
+          </Text>
+          <Text style={styles.confirmNote}>
+            Click the link in the email to confirm your account, then come back and sign in.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => setMode('signin')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.primaryBtnText}>Go to sign in</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={handleResendEmail}
+            disabled={loading}
+          >
+            {loading
+              ? <ActivityIndicator color={Colors.primary} size="small" />
+              : <Text style={styles.secondaryBtnText}>Resend confirmation email</Text>
+            }
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.backLink} onPress={() => setMode('signup')}>
+            <Text style={styles.backLinkText}>← Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          {/* Header */}
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={() => setMode('welcome')} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={24} color={Colors.text} />
@@ -62,7 +119,7 @@ export function AuthScreen() {
           </View>
 
           <Text style={styles.title}>
-            {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+            {mode === 'signup' ? 'Create your\naccount' : 'Welcome\nback'}
           </Text>
           <Text style={styles.sub}>
             {mode === 'signup'
@@ -70,7 +127,6 @@ export function AuthScreen() {
               : 'Sign in to continue building your connections.'}
           </Text>
 
-          {/* Form */}
           <View style={styles.form}>
             <View style={styles.inputWrap}>
               <Text style={styles.inputLabel}>Email address</Text>
@@ -128,7 +184,6 @@ export function AuthScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Switch mode */}
           <TouchableOpacity
             style={styles.switchBtn}
             onPress={() => setMode(mode === 'signup' ? 'signin' : 'signup')}
@@ -156,29 +211,34 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 },
   backBtn: { padding: 4 },
   logoSmall: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
-  logoSmallText: { fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  title: { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.8, marginBottom: 8 },
+  logoSmallText: { fontSize: 18, fontFamily: 'DMSans_700Bold', color: '#fff', letterSpacing: -0.5 },
+  title: { fontSize: 34, fontFamily: 'DMSans_700Bold', color: Colors.text, letterSpacing: -1, marginBottom: 8, lineHeight: 40 },
   sub: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 32 },
   form: { gap: Spacing.lg, marginBottom: Spacing.xl },
   inputWrap: { gap: 8 },
-  inputLabel: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: Colors.text, marginLeft: 2 },
-  inputRow: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderColor: Colors.border,
-    borderRadius: Radius.lg, backgroundColor: Colors.background,
-    paddingHorizontal: Spacing.md,
-  },
+  inputLabel: { fontSize: 13, fontFamily: 'DMSans_600SemiBold', color: Colors.text, marginLeft: 2 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.lg, backgroundColor: Colors.background, paddingHorizontal: Spacing.md },
   inputIcon: { marginRight: 8 },
-  input: { flex: 1, paddingVertical: 14, fontSize: 15, color: Colors.text },
+  input: { flex: 1, paddingVertical: 14, fontSize: 15, color: Colors.text, fontFamily: 'DMSans_400Regular' },
   eyeBtn: { padding: 4 },
-  submitBtn: {
-    backgroundColor: Colors.primary, borderRadius: Radius.full,
-    paddingVertical: 15, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4,
-  },
-  submitText: { color: '#fff', fontSize: 16, fontFamily: "DMSans_700Bold", letterSpacing: 0.2 },
+  submitBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 },
+  submitText: { color: '#fff', fontSize: 16, fontFamily: 'DMSans_700Bold', letterSpacing: 0.2 },
   switchBtn: { alignItems: 'center', marginBottom: Spacing.lg },
   switchText: { fontSize: 14, color: Colors.textSecondary },
-  switchLink: { color: Colors.primary, fontFamily: "DMSans_700Bold" },
+  switchLink: { color: Colors.primary, fontFamily: 'DMSans_700Bold' },
   legal: { fontSize: 11, color: Colors.textTertiary, textAlign: 'center', lineHeight: 16 },
+
+  // Confirm screen
+  confirmWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 },
+  confirmIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  confirmTitle: { fontSize: 28, fontFamily: 'DMSans_700Bold', color: Colors.text, letterSpacing: -0.5, textAlign: 'center' },
+  confirmSub: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24 },
+  confirmEmail: { fontFamily: 'DMSans_600SemiBold', color: Colors.text },
+  confirmNote: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, backgroundColor: Colors.surface, padding: Spacing.lg, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border },
+  primaryBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 15, paddingHorizontal: 32, alignItems: 'center', width: '100%', marginTop: 8 },
+  primaryBtnText: { color: '#fff', fontSize: 15, fontFamily: 'DMSans_700Bold' },
+  secondaryBtn: { paddingVertical: 13, alignItems: 'center', width: '100%' },
+  secondaryBtnText: { fontSize: 14, color: Colors.primary, fontFamily: 'DMSans_600SemiBold' },
+  backLink: { padding: 10 },
+  backLinkText: { fontSize: 14, color: Colors.textSecondary },
 })
