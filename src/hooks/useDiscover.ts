@@ -182,10 +182,28 @@ export function useDiscover() {
       .single()
 
     if (theirLike) {
-      await supabase.from('matches').insert({
+      await supabase.from("matches").insert({
         user1_id: session.user.id,
         user2_id: likedId,
       })
+
+      // Notify the other person of the match
+      const { data: myProfile } = await supabase
+        .from("profiles")
+        .select("first_name")
+        .eq("id", session.user.id)
+        .single()
+
+      if (myProfile) {
+        await supabase.functions.invoke("send-push-notification", {
+          body: {
+            user_id: likedId,
+            title: "You have a new match! 🎉",
+            body: `You and ${myProfile.first_name} liked each other. Say hello!`,
+            data: { type: "match" },
+          },
+        })
+      }
       return 'match'
     }
 

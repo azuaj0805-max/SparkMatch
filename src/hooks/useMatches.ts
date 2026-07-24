@@ -3,6 +3,16 @@ import { supabase } from '../lib/supabase'
 import { Match, Message } from '../types'
 import { useAuth } from './useAuth'
 
+async function sendPushNotification(userId: string, title: string, body: string, data?: any) {
+  try {
+    await supabase.functions.invoke('send-push-notification', {
+      body: { user_id: userId, title, body, data },
+    })
+  } catch (e) {
+    console.log('Push notification error:', e)
+  }
+}
+
 export function useMatches() {
   const { session } = useAuth()
   const [matches, setMatches] = useState<Match[]>([])
@@ -22,7 +32,6 @@ export function useMatches() {
       }, () => fetchMatches())
       .subscribe()
 
-    // Update last active every 2 minutes
     const interval = setInterval(updateLastActive, 120000)
 
     return () => {
@@ -79,7 +88,6 @@ export function useMessages(matchId: string) {
         filter: `match_id=eq.${matchId}`,
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message])
-        // Mark as read immediately if we're viewing the chat
         markMessagesAsRead(matchId)
       })
       .subscribe()
@@ -96,7 +104,6 @@ export function useMessages(matchId: string) {
 
     if (!error && data) {
       setMessages(data as Message[])
-      // Mark all as read when opening chat
       markMessagesAsRead(matchId)
     }
     setLoading(false)
@@ -114,18 +121,41 @@ export function useMessages(matchId: string) {
 
   async function sendMessage(content: string) {
     if (!session) return
+
     const { error } = await supabase.from('messages').insert({
       match_id: matchId,
       sender_id: session.user.id,
       content,
       read: false,
     })
+
     if (!error) {
+      // Update last message
       await supabase
         .from('matches')
         .update({ last_message: content, last_message_at: new Date().toISOString() })
         .eq('id', matchId)
+
+      // Get the other user's ID and send push notification
+      const { data: match } = await supabase
+        .from('matches')
+        .select('user1_id, user2_id, user1:profiles!matches_user1_id_fkey(first_name), user2:profiles!matches_user2_id_fkey(first_name)')
+        .eq('id', matchId)
+        .single()
+
+      if (match) {
+        const otherId = match.user1_id === session.user.id ? match.user2_id : match.user1_id
+        const myName = match.user1_id === session.user.id ? (match.user1 as any).first_name : (match.user2 as any).first_name
+
+        await sendPushNotification(
+          otherId,
+          `New message from ${myName}`,
+          content.length > 50 ? content.substring(0, 50) + '...' : content,
+          { matchId, type: 'message' }
+        )
+      }
     }
+
     return error
   }
 

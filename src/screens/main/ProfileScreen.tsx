@@ -10,6 +10,7 @@ import { useNavigation } from "@react-navigation/native"
 import { useLikesReceived } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../../components/Avatar'
+import { ProfileCompletion } from "../../components/ProfileCompletion"
 import { InfoRow } from '../../components/InfoRow'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { SALARY_BADGE_LABELS, LOOKING_FOR_LABELS } from '../../types'
@@ -194,6 +195,8 @@ export function ProfileScreen() {
             )}
           </View>
         </View>
+
+        <ProfileCompletion profile={profile} />
 
         {(profile.photos ?? []).length > 0 ? (
           <View style={styles.card}>

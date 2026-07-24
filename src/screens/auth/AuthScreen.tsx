@@ -11,7 +11,7 @@ import { supabase } from '../../lib/supabase'
 import { WelcomeScreen } from './WelcomeScreen'
 import { Colors, Spacing, Radius } from '../../lib/styles'
 
-type Mode = 'welcome' | 'signup' | 'signin'
+type Mode = 'welcome' | 'signup' | 'signin' | 'reset'
 
 export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('welcome')
@@ -19,6 +19,7 @@ export function AuthScreen() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   async function handleSignUp() {
     if (!email || !password) { Alert.alert('Missing fields', 'Please enter your email and a password.'); return }
@@ -37,12 +38,97 @@ export function AuthScreen() {
     if (error) Alert.alert('Sign in failed', error.message)
   }
 
+  async function handleResetPassword() {
+    if (!email) { Alert.alert('Enter your email', 'Please enter the email address for your account.'); return }
+    setLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    setLoading(false)
+    if (error) {
+      Alert.alert('Error', error.message)
+    } else {
+      setResetSent(true)
+    }
+  }
+
   if (mode === 'welcome') {
     return (
       <WelcomeScreen
         onGetStarted={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMode('signup') }}
         onSignIn={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMode('signin') }}
       />
+    )
+  }
+
+  if (mode === 'reset') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => { setMode('signin'); setResetSent(false) }} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={24} color={Colors.text} />
+            </TouchableOpacity>
+            <View style={styles.logoSmall}>
+              <Text style={styles.logoSmallText}>M</Text>
+            </View>
+          </View>
+
+          {resetSent ? (
+            <View style={styles.confirmWrap}>
+              <View style={styles.confirmIconWrap}>
+                <Ionicons name="mail-outline" size={40} color={Colors.primary} />
+              </View>
+              <Text style={styles.title}>Check your email</Text>
+              <Text style={styles.sub}>
+                We sent a password reset link to{'\n'}
+                <Text style={{ fontFamily: 'DMSans_600SemiBold', color: Colors.text }}>{email}</Text>
+              </Text>
+              <TouchableOpacity style={styles.submitBtn} onPress={() => { setMode('signin'); setResetSent(false) }}>
+                <Text style={styles.submitText}>Back to sign in</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.title}>Reset your{'\n'}password</Text>
+              <Text style={styles.sub}>Enter your email and we'll send you a link to reset your password.</Text>
+
+              <View style={styles.form}>
+                <View style={styles.inputWrap}>
+                  <Text style={styles.inputLabel}>Email address</Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons name="mail-outline" size={18} color={Colors.textTertiary} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="you@example.com"
+                      placeholderTextColor={Colors.textTertiary}
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); handleResetPassword() }}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  {loading
+                    ? <ActivityIndicator color="#fff" />
+                    : <>
+                        <Text style={styles.submitText}>Send reset link</Text>
+                        <Ionicons name="arrow-forward" size={18} color="#fff" />
+                      </>
+                  }
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </SafeAreaView>
     )
   }
 
@@ -124,6 +210,15 @@ export function AuthScreen() {
                   </>
               }
             </TouchableOpacity>
+
+            {mode === 'signin' && (
+              <TouchableOpacity
+                style={styles.forgotBtn}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMode('reset') }}
+              >
+                <Text style={styles.forgotText}>Forgot your password?</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <TouchableOpacity
@@ -165,8 +260,12 @@ const styles = StyleSheet.create({
   eyeBtn: { padding: 4 },
   submitBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 },
   submitText: { color: '#fff', fontSize: 16, fontFamily: 'DMSans_700Bold', letterSpacing: 0.2 },
+  forgotBtn: { alignItems: 'center', paddingVertical: 4 },
+  forgotText: { fontSize: 14, color: Colors.primary, fontFamily: 'DMSans_600SemiBold' },
   switchBtn: { alignItems: 'center', marginBottom: Spacing.lg },
   switchText: { fontSize: 14, color: Colors.textSecondary },
   switchLink: { color: Colors.primary, fontFamily: 'DMSans_700Bold' },
   legal: { fontSize: 11, color: Colors.textTertiary, textAlign: 'center', lineHeight: 16 },
+  confirmWrap: { alignItems: 'center', gap: 16, paddingTop: 20 },
+  confirmIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
 })
