@@ -32,8 +32,8 @@
         "locationWhenInUsePermission": "Meridian uses your location to show you people nearby."
       }]
     ],
-    "extra"{
-  "e    "eas": {
+    "extra": {
+      "eas": {
         "projectId": "bb5d7b96-12ed-482a-b4c8-1145df892296"
       }
     }
