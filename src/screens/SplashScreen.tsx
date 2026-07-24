@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: Colors.navy,
+    backgroundColor: "#101E3B",
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 999,
