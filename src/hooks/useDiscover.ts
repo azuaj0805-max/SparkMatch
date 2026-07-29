@@ -66,6 +66,9 @@ export function useDiscover() {
         setLikesRemaining(MAX_LIKES_PER_DAY)
       }
     } else {
+      await supabase
+        .from("daily_like_counts")
+        .upsert({ user_id: session.user.id, like_date: today, count: 0 })
       setLikesRemaining(MAX_LIKES_PER_DAY)
     }
   }

@@ -21,14 +21,14 @@ export function PressableScale({ children, onPress, style, scale = 0.94, disable
   }
 
   return (
-    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }]}>
       <TouchableOpacity
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
         disabled={disabled}
-        style={style}
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
       >
         {children}
       </TouchableOpacity>

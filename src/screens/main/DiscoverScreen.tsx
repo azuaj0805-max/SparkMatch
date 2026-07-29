@@ -26,6 +26,8 @@ export function DiscoverScreen() {
   const [filterModal, setFilterModal] = useState(false)
   const [comment, setComment] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
+
+  React.useEffect(() => { setCurrentIndex(0) }, [profiles.length])
   const [tempFilters, setTempFilters] = useState<DiscoverFilters>(filters)
 
   const currentProfile = profiles[currentIndex]

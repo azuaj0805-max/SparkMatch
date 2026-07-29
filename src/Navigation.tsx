@@ -15,6 +15,7 @@ import { ViewProfileScreen } from './screens/main/ViewProfileScreen'
 import { EditProfileScreen } from './screens/main/EditProfileScreen'
 import { LegalScreen } from './screens/legal/LegalScreen'
 import { Colors } from './lib/styles'
+import { supabase } from './lib/supabase'
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -34,11 +35,29 @@ function MainTabs() {
 }
 
 function CustomTabBar({ state, navigation }: any) {
+  const { session } = useAuth()
+  const [newMatchCount, setNewMatchCount] = React.useState(0)
+
+  React.useEffect(() => {
+    if (!session) return
+    async function fetchCount() {
+      const { data } = await supabase
+        .from('matches')
+        .select('id, last_message')
+        .or(`user1_id.eq.${session!.user.id},user2_id.eq.${session!.user.id}`)
+      const count = (data ?? []).filter((m: any) => !m.last_message).length
+      setNewMatchCount(count)
+    }
+    fetchCount()
+    const interval = setInterval(fetchCount, 30000)
+    return () => clearInterval(interval)
+  }, [session])
+
   const tabs = [
-    { name: 'Discover', icon: 'compass-outline',   iconActive: 'compass',      label: 'Discover' },
-    { name: 'Likes',    icon: 'heart-outline',      iconActive: 'heart',        label: 'Likes' },
-    { name: 'Matches',  icon: 'chatbubble-outline', iconActive: 'chatbubble',   label: 'Matches' },
-    { name: 'Profile',  icon: 'person-outline',     iconActive: 'person',       label: 'Profile' },
+    { name: 'Discover', icon: 'compass-outline',   iconActive: 'compass',      label: 'Discover', badge: 0 },
+    { name: 'Likes',    icon: 'heart-outline',      iconActive: 'heart',        label: 'Likes',    badge: 0 },
+    { name: 'Matches',  icon: 'chatbubble-outline', iconActive: 'chatbubble',   label: 'Matches',  badge: newMatchCount },
+    { name: 'Profile',  icon: 'person-outline',     iconActive: 'person',       label: 'Profile',  badge: 0 },
   ]
 
   return (
@@ -55,12 +74,19 @@ function CustomTabBar({ state, navigation }: any) {
             }}
             activeOpacity={0.7}
           >
-            <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
-              <Ionicons
-                name={focused ? tab.iconActive as any : tab.icon as any}
-                size={24}
-                color={focused ? Colors.primary : Colors.textTertiary}
-              />
+            <View style={tabStyles.iconContainer}>
+              <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
+                <Ionicons
+                  name={focused ? tab.iconActive as any : tab.icon as any}
+                  size={24}
+                  color={focused ? Colors.primary : Colors.textTertiary}
+                />
+              </View>
+              {tab.badge > 0 && (
+                <View style={tabStyles.badgeDot}>
+                  <Text style={tabStyles.badgeText}>{tab.badge > 9 ? '9+' : tab.badge}</Text>
+                </View>
+              )}
             </View>
             <Text style={[tabStyles.label, focused && tabStyles.labelActive]}>
               {tab.label}
@@ -88,56 +114,16 @@ function RootNavigator() {
       }}
     >
       {!session ? (
-        <Stack.Screen
-          name="Auth"
-          component={AuthScreen}
-          options={{ animation: 'fade' }}
-        />
+        <Stack.Screen name="Auth" component={AuthScreen} options={{ animation: 'fade' }} />
       ) : !profile ? (
-        <Stack.Screen
-          name="Onboarding"
-          component={OnboardingScreen}
-          options={{ animation: 'fade' }}
-        />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ animation: 'fade' }} />
       ) : (
         <>
-          <Stack.Screen
-            name="Main"
-            component={MainTabs}
-            options={{ animation: 'fade' }}
-          />
-          <Stack.Screen
-            name="Chat"
-            component={ChatScreen}
-            options={{
-              animation: 'slide_from_right',
-              animationDuration: 200,
-            }}
-          />
-          <Stack.Screen
-            name="ViewProfile"
-            component={ViewProfileScreen}
-            options={{
-              animation: 'slide_from_bottom',
-              animationDuration: 300,
-            }}
-          />
-          <Stack.Screen
-            name="EditProfile"
-            component={EditProfileScreen}
-            options={{
-              animation: 'slide_from_bottom',
-              animationDuration: 300,
-            }}
-          />
-          <Stack.Screen
-            name="Legal"
-            component={LegalScreen}
-            options={{
-              animation: 'slide_from_right',
-              animationDuration: 200,
-            }}
-          />
+          <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
+          <Stack.Screen name="Chat" component={ChatScreen} options={{ animation: 'slide_from_right', animationDuration: 200 }} />
+          <Stack.Screen name="ViewProfile" component={ViewProfileScreen} options={{ animation: 'slide_from_bottom', animationDuration: 300 }} />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ animation: 'slide_from_bottom', animationDuration: 300 }} />
+          <Stack.Screen name="Legal" component={LegalScreen} options={{ animation: 'slide_from_right', animationDuration: 200 }} />
         </>
       )}
     </Stack.Navigator>
@@ -165,8 +151,17 @@ const tabStyles = StyleSheet.create({
     flexDirection: 'row',
   },
   tabBtn: { flex: 1, alignItems: 'center', gap: 3 },
+  iconContainer: { position: 'relative' },
   iconWrap: { width: 44, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 17 },
   iconWrapActive: { backgroundColor: '#EEF1FF' },
+  badgeDot: {
+    position: 'absolute', top: -2, right: -4,
+    backgroundColor: Colors.danger,
+    borderRadius: 10, minWidth: 18, height: 18,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4, borderWidth: 2, borderColor: Colors.background,
+  },
+  badgeText: { fontSize: 10, fontFamily: 'DMSans_700Bold', color: '#fff' },
   label: { fontSize: 10, color: '#8896AB', fontFamily: 'DMSans_500Medium' },
   labelActive: { color: '#6E8CFF', fontFamily: 'DMSans_700Bold' },
 })

@@ -26,18 +26,8 @@ export function usePhotoUpload() {
     const asset = result.assets[0]
     if (!asset || !asset.base64) return null
 
-    Alert.alert(
-      'Upload photo',
-      'Upload this photo to your profile?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Upload',
-          onPress: () => uploadPhoto(asset.base64!, asset.uri),
-        },
-      ]
-    )
-    return null
+    // Upload immediately without Alert confirmation
+    return await uploadPhoto(asset.base64, asset.uri)
   }
 
   async function uploadPhoto(base64: string, uri: string): Promise<string | null> {
@@ -77,8 +67,10 @@ export function usePhotoUpload() {
         .eq('id', session?.user.id)
 
       await refreshProfile()
-      Alert.alert('Done!', 'Your photo has been added to your profile.')
       return publicUrl
+    } catch (e) {
+      Alert.alert('Upload failed', 'Something went wrong. Please try again.')
+      return null
     } finally {
       setUploading(false)
     }

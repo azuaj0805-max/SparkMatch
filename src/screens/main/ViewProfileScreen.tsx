@@ -308,7 +308,7 @@ export function ViewProfileScreen({ route }: any) {
 }
 
 const styles = StyleSheet.create({
-  floatingHeader: { position: 'absolute', top: 52, left: 0, right: 0, zIndex: 10, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Spacing.lg },
+  floatingHeader: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Spacing.lg },
   floatingBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingBottom: 60 },
   photoWrap: { width: '100%', height: width * 1.2, position: 'relative' },
