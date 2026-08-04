@@ -12,11 +12,13 @@ const AVATAR_COLORS = [
 ]
 
 function getAvatarColor(name: string) {
+  if (!name || name.length === 0) return AVATAR_COLORS[0]
   const idx = name.charCodeAt(0) % AVATAR_COLORS.length
   return AVATAR_COLORS[idx]
 }
 
 function getInitials(name: string) {
+  if (!name || name.length === 0) return '?'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
@@ -28,7 +30,8 @@ type Props = {
 }
 
 export function Avatar({ name, photo, size = 48, bordered = false }: Props) {
-  const { bg, text } = getAvatarColor(name)
+  const safeName = name ?? ''
+  const { bg, text } = getAvatarColor(safeName)
   const fontSize = size * 0.35
 
   const containerStyle = {
@@ -53,8 +56,8 @@ export function Avatar({ name, photo, size = 48, bordered = false }: Props) {
 
   return (
     <View style={containerStyle}>
-      <Text style={{ fontSize, fontWeight: '600', color: text }}>
-        {getInitials(name)}
+      <Text style={{ fontSize, fontFamily: 'DMSans_600SemiBold', color: text }}>
+        {getInitials(safeName)}
       </Text>
     </View>
   )

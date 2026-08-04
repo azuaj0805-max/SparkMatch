@@ -58,7 +58,7 @@ export function usePhotoUpload() {
         .from('profiles')
         .select('photos')
         .eq('id', session?.user.id)
-        .single()
+        .maybeSingle()
 
       const existingPhotos = profileData?.photos ?? []
       await supabase
@@ -82,7 +82,7 @@ export function usePhotoUpload() {
       .from('profiles')
       .select('photos')
       .eq('id', session.user.id)
-      .single()
+      .maybeSingle()
 
     const updated = (profileData?.photos ?? []).filter((p: string) => p !== url)
     await supabase

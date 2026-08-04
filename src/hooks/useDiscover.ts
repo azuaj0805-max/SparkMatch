@@ -52,7 +52,7 @@ export function useDiscover() {
       .from('daily_like_counts')
       .select('*')
       .eq('user_id', session.user.id)
-      .single()
+      .maybeSingle()
 
     if (data) {
       if (data.like_date === today) {
@@ -135,7 +135,7 @@ export function useDiscover() {
       .from('daily_like_counts')
       .select('*')
       .eq('user_id', session.user.id)
-      .single()
+      .maybeSingle()
 
     if (data && data.like_date === today) {
       await supabase
@@ -182,7 +182,7 @@ export function useDiscover() {
       .eq('liker_id', likedId)
       .eq('liked_id', session.user.id)
       .eq('passed', false)
-      .single()
+      .maybeSingle()
 
     if (theirLike) {
       await supabase.from("matches").insert({
@@ -195,7 +195,7 @@ export function useDiscover() {
         .from("profiles")
         .select("first_name")
         .eq("id", session.user.id)
-        .single()
+        .maybeSingle()
 
       if (myProfile) {
         await supabase.functions.invoke("send-push-notification", {

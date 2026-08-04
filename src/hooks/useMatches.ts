@@ -141,7 +141,7 @@ export function useMessages(matchId: string) {
         .from('matches')
         .select('user1_id, user2_id, user1:profiles!matches_user1_id_fkey(first_name), user2:profiles!matches_user2_id_fkey(first_name)')
         .eq('id', matchId)
-        .single()
+        .maybeSingle()
 
       if (match) {
         const otherId = match.user1_id === session.user.id ? match.user2_id : match.user1_id

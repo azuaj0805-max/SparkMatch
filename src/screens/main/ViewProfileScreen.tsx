@@ -137,7 +137,7 @@ export function ViewProfileScreen({ route }: any) {
         <View style={styles.photoWrap}>
           {hasPhoto ? (
             <Image
-              source={{ uri: profile.photos[0] }}
+              source={{ uri: profile.photos?.[0] }}
               style={styles.photo}
               contentFit="cover"
               transition={200}

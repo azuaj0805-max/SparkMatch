@@ -317,7 +317,7 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
       ))}
       {profile.photos?.length > 1 && (
         <View style={styles.secondPhotoCard}>
-          <PhotoCarousel photos={profile.photos.slice(1)} height={width * 1.1} name={profile.first_name} />
+          <PhotoCarousel photos={(profile.photos ?? []).slice(1)} height={width * 1.1} name={profile.first_name} />
         </View>
       )}
       {profile.work_style?.length > 0 && (
