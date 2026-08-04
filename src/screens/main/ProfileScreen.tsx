@@ -172,6 +172,12 @@ export function ProfileScreen() {
         <View style={{ flexDirection: "row", gap: 8 }}>
           <TouchableOpacity
             style={styles.previewBtn}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate("Settings") }}
+          >
+            <Ionicons name="settings-outline" size={14} color={Colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.previewBtn}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate("ProfilePreview") }}
           >
             <Ionicons name="eye-outline" size={14} color={Colors.textSecondary} />
