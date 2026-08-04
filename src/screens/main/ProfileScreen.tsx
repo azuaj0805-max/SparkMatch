@@ -169,14 +169,22 @@ export function ProfileScreen() {
         <View>
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate('EditProfile') }}
-        >
-          <Ionicons name="pencil-outline" size={14} color={Colors.primary} />
-          <Text style={styles.editBtnText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity
+            style={styles.previewBtn}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate("ProfilePreview") }}
+          >
+            <Ionicons name="eye-outline" size={14} color={Colors.textSecondary} />
+            <Text style={styles.previewBtnText}>Preview</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate("EditProfile") }}
+          >
+            <Ionicons name="pencil-outline" size={14} color={Colors.primary} />
+            <Text style={styles.editBtnText}>Edit</Text>
+          </TouchableOpacity>
+        </View>      </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScroll}>
         <View style={styles.profileHero}>
@@ -328,7 +336,9 @@ const styles = StyleSheet.create({
   navBtnDisabled: { opacity: 0.3 },
   navBtnText: { fontSize: 14, color: Colors.text, fontFamily: "DMSans_600SemiBold" },
   navBtnPrimaryText: { color: '#fff' },
-  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full },
+  previewBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.surface, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border },
+  previewBtnText: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: Colors.textSecondary },
+  editBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full },
   editBtnText: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: Colors.primary },
   profileScroll: { padding: Spacing.xl, gap: 12, paddingBottom: 100 },
   profileHero: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: Spacing.lg, backgroundColor: Colors.surface, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border },
