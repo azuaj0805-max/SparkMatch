@@ -9,6 +9,7 @@ import { Image } from 'expo-image'
 import * as Haptics from 'expo-haptics'
 import { useDiscover, DiscoverFilters } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
+import { PhotoCarousel } from "../../components/PhotoCarousel"
 import { SkeletonProfileCard } from '../../components/SkeletonCard'
 import { MatchModal } from '../../components/MatchModal'
 import { PressableScale } from '../../components/PressableScale'
@@ -262,23 +263,12 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
   likesRemaining: number
 }) {
   const salaryLabel = profile.salary_range ? SALARY_BADGE_LABELS[profile.salary_range] : null
-  const hasPhoto = profile.photos?.length > 0
 
   return (
     <View style={styles.profileWrap}>
-
-      {/* Hero photo card */}
       <View style={styles.heroCard}>
         <View style={styles.photoWrap}>
-          {hasPhoto ? (
-            <Image source={{ uri: profile.photos[0] }} style={styles.photo} contentFit="cover" transition={200} />
-          ) : (
-            <View style={styles.photoPlaceholder}>
-              <View style={styles.initials}>
-                <Text style={styles.initialsText}>{profile.first_name[0]}</Text>
-              </View>
-            </View>
-          )}
+          <PhotoCarousel photos={profile.photos ?? []} height={width * 1.15} name={profile.first_name} />
           <View style={styles.photoOverlay}>
             <View style={{ flex: 1 }}>
               <Text style={styles.photoName}>{profile.first_name}, {profile.age}</Text>
@@ -295,76 +285,62 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
             )}
           </View>
         </View>
-
-        {/* Career below photo in hero card */}
         {(profile.job_title || profile.industry) && (
           <View style={styles.heroInfo}>
             <View style={styles.blockIcon}>
               <Ionicons name="briefcase-outline" size={15} color={Colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              {profile.job_title && (
-                <Text style={styles.blockTitle}>
-                  {profile.job_title}{profile.company ? ` at ${profile.company}` : ''}
-                </Text>
-              )}
+              {profile.job_title && <Text style={styles.blockTitle}>{profile.job_title}{profile.company ? ` at ${profile.company}` : ""}</Text>}
               {profile.industry && <Text style={styles.blockSub}>{profile.industry}</Text>}
             </View>
           </View>
         )}
       </View>
-
-      {/* Prompt cards — one per prompt like Hinge */}
       {profile.prompts?.map((p, i) => (
         <View key={i} style={styles.contentCard}>
           <Text style={styles.promptQ}>{p.question}</Text>
           <Text style={styles.promptA}>{p.answer}</Text>
         </View>
       ))}
-
-      {/* Second photo if available */}
       {profile.photos?.length > 1 && (
         <View style={styles.secondPhotoCard}>
-          <Image source={{ uri: profile.photos[1] }} style={styles.secondPhoto} contentFit="cover" transition={200} />
+          <PhotoCarousel photos={profile.photos.slice(1)} height={width * 1.1} name={profile.first_name} />
         </View>
       )}
-
-      {/* Work style card */}
       {profile.work_style?.length > 0 && (
         <View style={styles.contentCard}>
           <Text style={styles.contentCardLabel}>Work style</Text>
           <View style={styles.tagWrap}>
             {profile.work_style.map(w => (
-              <View key={w} style={styles.tag}>
-                <Text style={styles.tagText}>{w}</Text>
-              </View>
+              <View key={w} style={styles.tag}><Text style={styles.tagText}>{w}</Text></View>
             ))}
           </View>
         </View>
       )}
-
-      {/* Looking for card */}
-      {profile.looking_for && profile.looking_for !== 'private' && (
+      {profile.looking_for && profile.looking_for !== "private" && (
         <View style={styles.contentCard}>
           <Text style={styles.contentCardLabel}>Looking for</Text>
           <View style={styles.goalRow}>
             <Ionicons name="flag-outline" size={16} color={Colors.primary} />
             <Text style={styles.goalText}>
-              {profile.looking_for === 'serious' ? 'Something serious'
-                : profile.looking_for === 'open' ? 'Open to anything'
-                : 'Casual dating'}
+              {profile.looking_for === "serious" ? "Something serious" : profile.looking_for === "open" ? "Open to anything" : "Casual dating"}
             </Text>
           </View>
         </View>
       )}
-
-      {/* Bottom padding for action bar */}
       <View style={{ height: 100 }} />
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+function Tag({ label }: { label: string }) {
+  return (
+    <View style={styles.tag}>
+      <Text style={styles.tagText}>{label}</Text>
+    </View>
+  )
+}const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   headerTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
