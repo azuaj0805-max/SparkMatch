@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Modal, TextInput, Alert, ScrollView, Dimensions,
+  Modal, TextInput, Alert, ScrollView, Dimensions, Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -27,6 +27,14 @@ export function DiscoverScreen() {
   const [filterModal, setFilterModal] = useState(false)
   const [comment, setComment] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
+  const fadeAnim = React.useRef(new Animated.Value(1)).current
+
+  function animateNext() {
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start()
+  }
 
   React.useEffect(() => { setCurrentIndex(0) }, [profiles.length])
   const [tempFilters, setTempFilters] = useState<DiscoverFilters>(filters)
@@ -51,7 +59,7 @@ export function DiscoverScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     const result = await likeProfile(profile.id)
-    setCurrentIndex(i => i + 1)
+    animateNext(); setCurrentIndex(i => i + 1)
     if (result === 'match') setMatchModal(true)
     if (result === 'conversation_limit') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
@@ -62,7 +70,7 @@ export function DiscoverScreen() {
   async function handlePass(profile: Profile) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     await passProfile(profile.id)
-    setCurrentIndex(i => i + 1)
+    animateNext(); setCurrentIndex(i => i + 1)
   }
 
   async function submitComment() {
@@ -71,7 +79,7 @@ export function DiscoverScreen() {
     const result = await likeProfile(commentModal.id, comment)
     setCommentModal(null)
     setComment('')
-    setCurrentIndex(i => i + 1)
+    animateNext(); setCurrentIndex(i => i + 1)
     if (result === 'match') setMatchModal(true)
   }
 
@@ -87,6 +95,9 @@ export function DiscoverScreen() {
     <SafeAreaView style={GlobalStyles.safeArea}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Meridian</Text>
+        {profiles.length > 0 && !loading && currentProfile && (
+          <Text style={styles.profileCounter}>{profiles.length - currentIndex} left</Text>
+        )}
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={[styles.filterBtn, filtersActive && styles.filterBtnActive]}
@@ -130,6 +141,7 @@ export function DiscoverScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
+          <Animated.View style={{ opacity: fadeAnim }}>
           <ProfileCard
             profile={currentProfile}
             distance={getDistance(currentProfile)}
@@ -138,7 +150,7 @@ export function DiscoverScreen() {
             onComment={() => setCommentModal(currentProfile)}
             likesRemaining={likesRemaining}
           />
-        </ScrollView>
+          </Animated.View>        </ScrollView>
       )}
 
       {/* Sticky action bar */}
@@ -343,7 +355,7 @@ function Tag({ label }: { label: string }) {
 }const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   headerTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, letterSpacing: -0.5 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  profileCounter: { fontSize: 12, fontFamily: "DMSans_500Medium", color: Colors.textTertiary },  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   filterBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   filterBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
   filterDot: { position: 'absolute', top: 6, right: 6, width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.primary },
