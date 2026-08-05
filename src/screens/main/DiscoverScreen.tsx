@@ -355,7 +355,8 @@ function Tag({ label }: { label: string }) {
 }const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
   headerTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, letterSpacing: -0.5 },
-  profileCounter: { fontSize: 12, fontFamily: "DMSans_500Medium", color: Colors.textTertiary },  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  profileCounter: { fontSize: 12, fontFamily: "DMSans_500Medium", color: Colors.textTertiary },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   filterBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   filterBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
   filterDot: { position: 'absolute', top: 6, right: 6, width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.primary },

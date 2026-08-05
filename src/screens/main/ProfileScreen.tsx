@@ -75,9 +75,7 @@ export function LikesScreen() {
                 <View style={styles.likeMetaRow}>
                   <Ionicons name="briefcase-outline" size={13} color={Colors.textSecondary} />
                   <Text style={styles.likeJob}>
-                    {currentLike.liker.job_title}
-                    {currentLike.liker.company ? ` · ${currentLike.liker.company}` : ''}
-                  </Text>
+                    {`${currentLike.liker.job_title}${currentLike.liker.company ? " u00B7 " + currentLike.liker.company : ""}`}                  </Text>
                 </View>
               )}
               {currentLike?.liker?.city && (
@@ -250,7 +248,7 @@ export function ProfileScreen() {
             <Text style={styles.cardTitle}>Dating preferences</Text>
             <InfoRow icon="flag-outline" text={lookingForLabel} />
             {profile.relationship_style?.length > 0 && <InfoRow icon="heart-outline" text={profile.relationship_style.join(', ')} />}
-            {profile.orientation?.length > 0 && profile.show_orientation && <InfoRow icon="rainbow-outline" text={profile.orientation.join(', ')} />}
+            {profile.orientation?.length > 0 && profile.show_orientation && <InfoRow icon="radio-outline" text={profile.orientation.join(', ')} />}
           </View>
         )}
 

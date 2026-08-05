@@ -117,7 +117,7 @@ export function MatchesScreen() {
             </View>
             <View style={styles.convoInfo}>
               <View style={styles.convoTopRow}>
-                <Text style={styles.convoName}>{item.other_user?.first_name}{item.other_user?.age ? `, ${item.other_user.age}` : ""}</Text>
+                <Text style={styles.convoName}>{`${item.other_user?.first_name ?? ""}${item.other_user?.age ? ", " + item.other_user.age : ""}`}</Text>
                 {item.last_message_at && (
                   <Text style={styles.convoTime}>{formatTime(item.last_message_at)}</Text>
                 )}
@@ -262,6 +262,16 @@ export function ChatScreen({ route }: any) {
                 }}
               />
             )}
+            {isOtherTyping && (
+              <View style={styles.typingIndicator}>
+                <View style={styles.typingBubble}>
+                  <View style={styles.typingDot} />
+                  <View style={[styles.typingDot, { opacity: 0.6 }]} />
+                  <View style={[styles.typingDot, { opacity: 0.3 }]} />
+                </View>
+                <Text style={styles.typingText}>{otherUser.first_name} is typing</Text>
+              </View>
+            )}
 
             <View style={styles.inputRow}>
               <TextInput
@@ -350,4 +360,5 @@ const styles = StyleSheet.create({
   typingIndicator: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: Spacing.lg, paddingVertical: 8 },
   typingBubble: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: Colors.border },
   typingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.textTertiary },
-  typingText: { fontSize: 12, color: Colors.textTertiary, fontFamily: "DMSans_400Regular" },})
+  typingText: { fontSize: 12, color: Colors.textTertiary, fontFamily: "DMSans_400Regular" },
+})
