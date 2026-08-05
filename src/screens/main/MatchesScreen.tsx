@@ -117,11 +117,12 @@ export function MatchesScreen() {
             </View>
             <View style={styles.convoInfo}>
               <View style={styles.convoTopRow}>
-                <Text style={styles.convoName}>{item.other_user?.first_name}</Text>
+                <Text style={styles.convoName}>{item.other_user?.first_name}{item.other_user?.age ? `, ${item.other_user.age}` : ""}</Text>
                 {item.last_message_at && (
                   <Text style={styles.convoTime}>{formatTime(item.last_message_at)}</Text>
                 )}
               </View>
+              <Text style={styles.convoSubInfo} numberOfLines={1}>{item.other_user?.job_title ?? item.other_user?.city ?? ""}</Text>
               <Text style={styles.convoPreview} numberOfLines={1}>{item.last_message}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={Colors.borderDark} />
@@ -142,7 +143,7 @@ function formatTime(iso: string) {
 
 export function ChatScreen({ route }: any) {
   const { matchId, otherUser } = route.params as { matchId: string; otherUser: Profile }
-  const { messages, loading, sendMessage } = useMessages(matchId)
+  const { messages, loading, sendMessage, handleTyping, isOtherTyping } = useMessages(matchId)
   const { session } = useAuth()
   const [text, setText] = React.useState('')
   const flatRef = React.useRef<FlatList>(null)
@@ -268,7 +269,7 @@ export function ChatScreen({ route }: any) {
                 placeholder="Message..."
                 placeholderTextColor={Colors.textTertiary}
                 value={text}
-                onChangeText={setText}
+                onChangeText={(t) => { setText(t); handleTyping() }}
                 multiline
                 returnKeyType="send"
                 onSubmitEditing={handleSend}
@@ -307,6 +308,7 @@ const styles = StyleSheet.create({
   convoInfo: { flex: 1 },
   convoTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
   convoName: { fontSize: 15, fontFamily: "DMSans_600SemiBold", color: Colors.text },
+  convoSubInfo: { fontSize: 12, color: Colors.primary, fontFamily: "DMSans_500Medium", marginBottom: 2 },
   convoPreview: { fontSize: 13, color: Colors.textSecondary },
   convoTime: { fontSize: 11, color: Colors.textTertiary },
   empty: { padding: 40, alignItems: 'center', paddingTop: 60 },
@@ -345,4 +347,7 @@ const styles = StyleSheet.create({
   chatInput: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, fontSize: 15, color: Colors.text, maxHeight: 100, backgroundColor: Colors.surface },
   sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { backgroundColor: Colors.borderDark },
-})
+  typingIndicator: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: Spacing.lg, paddingVertical: 8 },
+  typingBubble: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: Colors.border },
+  typingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.textTertiary },
+  typingText: { fontSize: 12, color: Colors.textTertiary, fontFamily: "DMSans_400Regular" },})

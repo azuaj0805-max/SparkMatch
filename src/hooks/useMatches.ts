@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Match, Message } from '../types'
 import { useAuth } from './useAuth'
@@ -75,6 +75,8 @@ export function useMessages(matchId: string) {
   const { session } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
+  const [isOtherTyping, setIsOtherTyping] = useState(false)
+  const typingTimeout = useRef<any>(null)
 
   useEffect(() => {
     fetchMessages()
@@ -89,6 +91,19 @@ export function useMessages(matchId: string) {
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message])
         markMessagesAsRead(matchId)
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'matches',
+        filter: `id=eq.${matchId}`,
+      }, (payload) => {
+        // Check if other user is typing
+        if (!session) return
+        const match = payload.new as any
+        const isUser1 = match.user1_id === session.user.id
+        const otherTyping = isUser1 ? match.user2_typing : match.user1_typing
+        setIsOtherTyping(otherTyping)
       })
       .subscribe()
 
@@ -119,8 +134,36 @@ export function useMessages(matchId: string) {
       .eq('read', false)
   }
 
+  async function setTyping(isTyping: boolean) {
+    if (!session) return
+    const { data: match } = await supabase
+      .from('matches')
+      .select('user1_id')
+      .eq('id', matchId)
+      .maybeSingle()
+
+    if (!match) return
+    const isUser1 = match.user1_id === session.user.id
+    const field = isUser1 ? 'user1_typing' : 'user2_typing'
+
+    await supabase
+      .from('matches')
+      .update({ [field]: isTyping })
+      .eq('id', matchId)
+  }
+
+  function handleTyping() {
+    setTyping(true)
+    if (typingTimeout.current) clearTimeout(typingTimeout.current)
+    typingTimeout.current = setTimeout(() => setTyping(false), 3000)
+  }
+
   async function sendMessage(content: string) {
     if (!session) return
+
+    // Stop typing indicator
+    setTyping(false)
+    if (typingTimeout.current) clearTimeout(typingTimeout.current)
 
     const { error } = await supabase.from('messages').insert({
       match_id: matchId,
@@ -130,13 +173,11 @@ export function useMessages(matchId: string) {
     })
 
     if (!error) {
-      // Update last message
       await supabase
         .from('matches')
         .update({ last_message: content, last_message_at: new Date().toISOString() })
         .eq('id', matchId)
 
-      // Get the other user's ID and send push notification
       const { data: match } = await supabase
         .from('matches')
         .select('user1_id, user2_id, user1:profiles!matches_user1_id_fkey(first_name), user2:profiles!matches_user2_id_fkey(first_name)')
@@ -159,5 +200,5 @@ export function useMessages(matchId: string) {
     return error
   }
 
-  return { messages, loading, sendMessage }
+  return { messages, loading, isOtherTyping, sendMessage, handleTyping }
 }
