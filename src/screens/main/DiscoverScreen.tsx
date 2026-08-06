@@ -5,14 +5,13 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { Image } from 'expo-image'
 import * as Haptics from 'expo-haptics'
 import { useDiscover, DiscoverFilters } from '../../hooks/useDiscover'
 import { useAuth } from '../../hooks/useAuth'
-import { PhotoCarousel } from "../../components/PhotoCarousel"
 import { SkeletonProfileCard } from '../../components/SkeletonCard'
 import { MatchModal } from '../../components/MatchModal'
 import { PressableScale } from '../../components/PressableScale'
+import { PhotoCarousel } from '../../components/PhotoCarousel'
 import { Colors, Spacing, Radius, GlobalStyles } from '../../lib/styles'
 import { Profile, SALARY_BADGE_LABELS } from '../../types'
 import { getDistanceLabel } from '../../lib/distance'
@@ -27,26 +26,24 @@ export function DiscoverScreen() {
   const [filterModal, setFilterModal] = useState(false)
   const [comment, setComment] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [tempFilters, setTempFilters] = useState<DiscoverFilters>(filters)
   const fadeAnim = React.useRef(new Animated.Value(1)).current
 
-  function animateNext() {
-    Animated.sequence([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start()
-  }
-
   React.useEffect(() => { setCurrentIndex(0) }, [profiles.length])
-  const [tempFilters, setTempFilters] = useState<DiscoverFilters>(filters)
 
   const currentProfile = profiles[currentIndex]
 
+  function animateNext() {
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+    ]).start()
+  }
+
   function getDistance(profile: Profile): string {
     return getDistanceLabel(
-      myProfile?.lat ?? null,
-      myProfile?.lng ?? null,
-      profile.lat ?? null,
-      profile.lng ?? null,
+      myProfile?.lat ?? null, myProfile?.lng ?? null,
+      profile.lat ?? null, profile.lng ?? null,
       profile.city
     )
   }
@@ -58,28 +55,30 @@ export function DiscoverScreen() {
       return
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    animateNext()
     const result = await likeProfile(profile.id)
-    animateNext(); setCurrentIndex(i => i + 1)
+    setCurrentIndex(i => i + 1)
     if (result === 'match') setMatchModal(true)
     if (result === 'conversation_limit') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
       Alert.alert('Match limit reached', 'You can have up to 5 active matches at a time.')
     }
   }
 
   async function handlePass(profile: Profile) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    animateNext()
     await passProfile(profile.id)
-    animateNext(); setCurrentIndex(i => i + 1)
+    setCurrentIndex(i => i + 1)
   }
 
   async function submitComment() {
     if (!commentModal) return
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    animateNext()
     const result = await likeProfile(commentModal.id, comment)
     setCommentModal(null)
     setComment('')
-    animateNext(); setCurrentIndex(i => i + 1)
+    setCurrentIndex(i => i + 1)
     if (result === 'match') setMatchModal(true)
   }
 
@@ -92,34 +91,35 @@ export function DiscoverScreen() {
   const filtersActive = filters.minAge !== 18 || filters.maxAge !== 50 || filters.maxDistance !== 50
 
   return (
-    <SafeAreaView style={GlobalStyles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Clean minimal header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Meridian</Text>
-        {profiles.length > 0 && !loading && currentProfile && (
-          <Text style={styles.profileCounter}>{profiles.length - currentIndex} left</Text>
-        )}
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={[styles.filterBtn, filtersActive && styles.filterBtnActive]}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setTempFilters(filters); setFilterModal(true) }}
-          >
-            <Ionicons name="options-outline" size={20} color={filtersActive ? Colors.primary : Colors.textSecondary} />
-            {filtersActive && <View style={styles.filterDot} />}
-          </TouchableOpacity>
-          <View style={styles.likesCounter}>
-            <Text style={styles.likesCounterNum}>{likesRemaining}</Text>
-            <Text style={styles.likesCounterLabel}>likes</Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={[styles.filterBtn, filtersActive && styles.filterBtnActive]}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setTempFilters(filters); setFilterModal(true) }}
+        >
+          <Ionicons name="options-outline" size={20} color={filtersActive ? Colors.primary : Colors.textSecondary} />
+          {filtersActive && <View style={styles.filterDot} />}
+        </TouchableOpacity>
       </View>
 
-      {likesRemaining <= 0 && (
+      {/* Likes remaining — subtle bar */}
+      {likesRemaining <= 0 ? (
         <View style={styles.limitBanner}>
-          <Ionicons name="time-outline" size={16} color={Colors.textSecondary} />
-          <Text style={styles.limitText}>You've used all 4 likes today. Come back tomorrow.</Text>
+          <Ionicons name="time-outline" size={14} color={Colors.textTertiary} />
+          <Text style={styles.limitText}>Daily likes used · Come back tomorrow</Text>
+        </View>
+      ) : (
+        <View style={styles.likesBar}>
+          {[...Array(4)].map((_, i) => (
+            <View key={i} style={[styles.likesDot, i < likesRemaining && styles.likesDotActive]} />
+          ))}
+          <Text style={styles.likesBarText}>{likesRemaining} like{likesRemaining !== 1 ? 's' : ''} left today</Text>
         </View>
       )}
 
+      {/* Card area */}
       {loading ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <SkeletonProfileCard />
@@ -127,21 +127,21 @@ export function DiscoverScreen() {
       ) : !currentProfile ? (
         <View style={styles.empty}>
           <View style={styles.emptyIconWrap}>
-            <Ionicons name="compass-outline" size={40} color={Colors.primary} />
+            <Ionicons name="compass-outline" size={32} color={Colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>You've seen everyone</Text>
-          <Text style={styles.emptySub}>Try adjusting your filters or check back later.</Text>
+          <Text style={styles.emptyTitle}>You're all caught up</Text>
+          <Text style={styles.emptySub}>Check back later for new people near you.</Text>
           <TouchableOpacity style={styles.adjustBtn} onPress={() => setFilterModal(true)}>
             <Text style={styles.adjustBtnText}>Adjust filters</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView
+        <Animated.ScrollView
           key={currentProfile.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          style={{ opacity: fadeAnim }}
         >
-          <Animated.View style={{ opacity: fadeAnim }}>
           <ProfileCard
             profile={currentProfile}
             distance={getDistance(currentProfile)}
@@ -150,26 +150,28 @@ export function DiscoverScreen() {
             onComment={() => setCommentModal(currentProfile)}
             likesRemaining={likesRemaining}
           />
-          </Animated.View>
-        </ScrollView>
+          <View style={{ height: 110 }} />
+        </Animated.ScrollView>
       )}
 
-      {/* Sticky action bar */}
+      {/* Sticky action bar — redesigned */}
       {currentProfile && !loading && (
         <View style={styles.actionBar}>
           <PressableScale style={styles.passBtn} onPress={() => handlePass(currentProfile)}>
-            <Ionicons name="close" size={26} color={Colors.textSecondary} />
+            <Ionicons name="close" size={22} color={Colors.textSecondary} />
           </PressableScale>
+
           <PressableScale
             style={[styles.likeBtn, likesRemaining <= 0 && styles.likeBtnDisabled]}
             onPress={() => handleLike(currentProfile)}
             disabled={likesRemaining <= 0}
-            scale={0.9}
+            scale={0.92}
           >
-            <Ionicons name="heart" size={30} color="#fff" />
+            <Ionicons name="heart" size={26} color="#fff" />
           </PressableScale>
+
           <PressableScale style={styles.commentBtn} onPress={() => setCommentModal(currentProfile)}>
-            <Ionicons name="chatbubble-outline" size={22} color={Colors.primary} />
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.primary} />
           </PressableScale>
         </View>
       )}
@@ -184,6 +186,7 @@ export function DiscoverScreen() {
       <Modal visible={filterModal} transparent animationType="slide">
         <View style={styles.modalOverlayBottom}>
           <View style={styles.filterCard}>
+            <View style={styles.filterHandle} />
             <View style={styles.filterHeader}>
               <Text style={styles.filterTitle}>Filters</Text>
               <TouchableOpacity onPress={() => setTempFilters({ minAge: 18, maxAge: 50, maxDistance: 50 })}>
@@ -229,7 +232,7 @@ export function DiscoverScreen() {
               ))}
             </View>
             <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
-              <Text style={styles.applyBtnText}>Apply filters</Text>
+              <Text style={styles.applyBtnText}>Apply</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelFilterBtn} onPress={() => setFilterModal(false)}>
               <Text style={styles.cancelFilterText}>Cancel</Text>
@@ -242,23 +245,25 @@ export function DiscoverScreen() {
       <Modal visible={!!commentModal} transparent animationType="slide">
         <View style={styles.modalOverlayBottom}>
           <View style={styles.commentCard}>
-            <Text style={styles.commentTitle}>Add a note</Text>
-            <Text style={styles.commentSub}>What caught your attention? A thoughtful note gets 3× more responses.</Text>
+            <View style={styles.filterHandle} />
+            <Text style={styles.commentTitle}>Send a note</Text>
+            <Text style={styles.commentSub}>Stand out — a thoughtful note gets 3× more responses.</Text>
             <TextInput
               style={styles.commentInput}
-              placeholder="Write something thoughtful..."
+              placeholder="What caught your eye?"
               placeholderTextColor={Colors.textTertiary}
               value={comment}
               onChangeText={setComment}
               multiline
               numberOfLines={3}
               textAlignVertical="top"
+              autoFocus
             />
-            <TouchableOpacity style={styles.matchBtn} onPress={submitComment}>
-              <Text style={styles.matchBtnText}>Like with note</Text>
+            <TouchableOpacity style={styles.applyBtn} onPress={submitComment}>
+              <Text style={styles.applyBtnText}>Like with note</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.keepBtn} onPress={() => setCommentModal(null)}>
-              <Text style={styles.keepText}>Cancel</Text>
+            <TouchableOpacity style={styles.cancelFilterBtn} onPress={() => setCommentModal(null)}>
+              <Text style={styles.cancelFilterText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -279,187 +284,215 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
 
   return (
     <View style={styles.profileWrap}>
+      {/* Hero photo — full bleed, no border radius on top */}
       <View style={styles.heroCard}>
-        <View style={styles.photoWrap}>
-          <PhotoCarousel photos={profile.photos ?? []} height={width * 1.15} name={profile.first_name} />
-          <View style={styles.photoOverlay}>
+        <PhotoCarousel
+          photos={profile.photos ?? []}
+          height={width * 1.25}
+          name={profile.first_name}
+        />
+        {/* Name overlay — sits on photo */}
+        <View style={styles.photoOverlay}>
+          <View style={styles.nameRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.photoName}>{profile.first_name}, {profile.age}</Text>
-              <View style={styles.photoMeta}>
-                <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.photoMetaText}>{distance}</Text>
-              </View>
+              <Text style={styles.photoLocation}>{distance}</Text>
             </View>
             {salaryLabel && (
-              <View style={styles.salaryBadge}>
-                <Ionicons name="trending-up-outline" size={12} color={Colors.green} />
-                <Text style={styles.salaryBadgeText}>{salaryLabel}</Text>
+              <View style={styles.salaryChip}>
+                <Text style={styles.salaryChipText}>{salaryLabel}</Text>
               </View>
             )}
           </View>
+          {profile.salary_verified && (
+            <View style={styles.verifiedChip}>
+              <Ionicons name="shield-checkmark" size={11} color="#fff" />
+              <Text style={styles.verifiedChipText}>Verified</Text>
+            </View>
+          )}
         </View>
-        {(profile.job_title || profile.industry) && (
-          <View style={styles.heroInfo}>
-            <View style={styles.blockIcon}>
-              <Ionicons name="briefcase-outline" size={15} color={Colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              {profile.job_title && <Text style={styles.blockTitle}>{profile.job_title}{profile.company ? ` at ${profile.company}` : ""}</Text>}
-              {profile.industry && <Text style={styles.blockSub}>{profile.industry}</Text>}
-            </View>
-          </View>
-        )}
       </View>
-      {profile.prompts?.map((p, i) => (
-        <View key={i} style={styles.contentCard}>
+
+      {/* Career — clean, no border card */}
+      {(profile.job_title || profile.industry) && (
+        <View style={styles.infoRow}>
+          <Ionicons name="briefcase-outline" size={15} color={Colors.textTertiary} />
+          <Text style={styles.infoText}>
+            {profile.job_title}{profile.company ? ` · ${profile.company}` : ''}
+            {profile.industry ? `  ·  ${profile.industry}` : ''}
+          </Text>
+        </View>
+      )}
+
+      {/* Prompts — the centerpiece */}
+      {profile.prompts?.slice(0, 1).map((p, i) => (
+        <View key={i} style={styles.promptCard}>
           <Text style={styles.promptQ}>{p.question}</Text>
           <Text style={styles.promptA}>{p.answer}</Text>
         </View>
       ))}
-      {profile.photos?.length > 1 && (
-        <View style={styles.secondPhotoCard}>
-          <PhotoCarousel photos={(profile.photos ?? []).slice(1)} height={width * 1.1} name={profile.first_name} />
+
+      {/* Second photo */}
+      {(profile.photos ?? []).length > 1 && (
+        <View style={styles.secondPhoto}>
+          <PhotoCarousel
+            photos={(profile.photos ?? []).slice(1)}
+            height={width * 0.9}
+            name={profile.first_name}
+          />
         </View>
       )}
+
+      {/* Work style tags — minimal */}
       {profile.work_style?.length > 0 && (
-        <View style={styles.contentCard}>
-          <Text style={styles.contentCardLabel}>Work style</Text>
-          <View style={styles.tagWrap}>
-            {profile.work_style.map(w => (
-              <View key={w} style={styles.tag}><Text style={styles.tagText}>{w}</Text></View>
-            ))}
-          </View>
+        <View style={styles.tagsRow}>
+          {profile.work_style.slice(0, 3).map(w => (
+            <View key={w} style={styles.tag}>
+              <Text style={styles.tagText}>{w}</Text>
+            </View>
+          ))}
         </View>
       )}
-      {profile.looking_for && profile.looking_for !== "private" && (
-        <View style={styles.contentCard}>
-          <Text style={styles.contentCardLabel}>Looking for</Text>
-          <View style={styles.goalRow}>
-            <Ionicons name="flag-outline" size={16} color={Colors.primary} />
-            <Text style={styles.goalText}>
-              {profile.looking_for === "serious" ? "Something serious" : profile.looking_for === "open" ? "Open to anything" : "Casual dating"}
-            </Text>
-          </View>
+
+      {/* Looking for */}
+      {profile.looking_for && profile.looking_for !== 'private' && (
+        <View style={styles.lookingRow}>
+          <Text style={styles.lookingLabel}>Looking for</Text>
+          <Text style={styles.lookingValue}>
+            {profile.looking_for === 'serious' ? 'Something serious'
+              : profile.looking_for === 'open' ? 'Open to anything'
+              : 'Casual dating'}
+          </Text>
         </View>
       )}
-      <View style={{ height: 100 }} />
     </View>
   )
 }
 
-function Tag({ label }: { label: string }) {
-  return (
-    <View style={styles.tag}>
-      <Text style={styles.tagText}>{label}</Text>
-    </View>
-  )
-}const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: 14, borderBottomWidth: 1, borderColor: Colors.border },
-  headerTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, letterSpacing: -0.5 },
-  profileCounter: { fontSize: 12, fontFamily: "DMSans_500Medium", color: Colors.textTertiary },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  filterBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  filterBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  filterDot: { position: 'absolute', top: 6, right: 6, width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.primary },
-  likesCounter: { alignItems: 'center', backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.lg },
-  likesCounterNum: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.primary },
-  likesCounterLabel: { fontSize: 10, color: Colors.primary, fontFamily: 'DMSans_500Medium', textTransform: 'uppercase', letterSpacing: 0.5 },
-  limitBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.surface, padding: Spacing.md, marginHorizontal: Spacing.lg, marginTop: Spacing.md, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },
-  limitText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
-  scrollContent: { padding: Spacing.lg, paddingBottom: 20 },
-  profileWrap: { gap: Spacing.md },
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#FAFAFA' },
+
+  // Header
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
+  headerTitle: { fontSize: 22, fontFamily: 'DMSans_700Bold', color: Colors.navy, letterSpacing: -0.5 },
+  filterBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2, position: 'relative' },
+  filterBtnActive: { backgroundColor: Colors.primaryLight },
+  filterDot: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary },
+
+  // Likes bar
+  likesBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 8, gap: 6 },
+  likesDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
+  likesDotActive: { backgroundColor: Colors.primary },
+  likesBarText: { fontSize: 12, fontFamily: 'DMSans_400Regular', color: Colors.textTertiary, marginLeft: 4 },
+  limitBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingBottom: 8 },
+  limitText: { fontSize: 12, color: Colors.textTertiary },
+
+  // Scroll
+  scrollContent: { paddingHorizontal: 16, paddingTop: 4 },
+
+  // Profile
+  profileWrap: { gap: 2 },
 
   // Hero card
-  heroCard: { borderRadius: Radius.xl, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.background },
-  photoWrap: { width: '100%', height: width * 1.15, position: 'relative' },
-  photo: { width: '100%', height: '100%' },
-  photoPlaceholder: { width: '100%', height: '100%', backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
-  initials: { width: 100, height: 100, borderRadius: 50, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  initialsText: { fontSize: 40, fontFamily: 'DMSans_700Bold', color: Colors.primary },
-  photoOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: Spacing.lg, paddingBottom: Spacing.xl, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.4)' },
-  photoName: { fontSize: 28, fontFamily: 'DMSans_700Bold', color: '#fff', letterSpacing: -0.5, marginBottom: 4 },
-  photoMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  photoMetaText: { fontSize: 13, color: 'rgba(255,255,255,0.85)' },
-  salaryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.greenLight, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.greenBorder },
-  salaryBadgeText: { fontSize: 12, fontFamily: 'DMSans_600SemiBold', color: Colors.green },
-  heroInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.lg },
-  blockIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  blockTitle: { fontSize: 15, fontFamily: 'DMSans_600SemiBold', color: Colors.text },
-  blockSub: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  heroCard: { borderRadius: 20, overflow: 'hidden', position: 'relative' },
+  photoOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    padding: 16, paddingBottom: 20,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+  },
+  nameRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  photoName: { fontSize: 30, fontFamily: 'DMSans_700Bold', color: '#fff', letterSpacing: -0.8, lineHeight: 34 },
+  photoLocation: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontFamily: 'DMSans_400Regular' },
+  salaryChip: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+  salaryChipText: { fontSize: 12, fontFamily: 'DMSans_600SemiBold', color: '#fff' },
+  verifiedChip: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 8, backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  verifiedChipText: { fontSize: 11, fontFamily: 'DMSans_600SemiBold', color: '#fff' },
 
-  // Content cards
-  contentCard: { borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.background, padding: Spacing.lg, gap: 10 },
-  contentCardLabel: { fontSize: 11, fontFamily: 'DMSans_700Bold', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8 },
-  promptQ: { fontSize: 13, fontFamily: 'DMSans_700Bold', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  // Info row
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 10 },
+  infoText: { fontSize: 13, color: Colors.textSecondary, fontFamily: 'DMSans_400Regular', flex: 1 },
+
+  // Prompt card
+  promptCard: { backgroundColor: '#fff', borderRadius: 16, padding: 18, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1, marginVertical: 4 },
+  promptQ: { fontSize: 11, fontFamily: 'DMSans_700Bold', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 0.8 },
   promptA: { fontSize: 18, color: Colors.text, lineHeight: 26, fontFamily: 'DMSans_500Medium' },
 
   // Second photo
-  secondPhotoCard: { borderRadius: Radius.xl, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border, height: width * 1.1 },
-  secondPhoto: { width: '100%', height: '100%' },
+  secondPhoto: { borderRadius: 16, overflow: 'hidden', marginVertical: 4 },
 
   // Tags
-  tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: Colors.primaryLight },
-  tagText: { fontSize: 13, color: Colors.primary, fontFamily: 'DMSans_500Medium' },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 2, paddingVertical: 6 },
+  tag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: Colors.border },
+  tagText: { fontSize: 13, color: Colors.textSecondary, fontFamily: 'DMSans_400Regular' },
 
-  // Goal
-  goalRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  goalText: { fontSize: 16, color: Colors.text, fontFamily: 'DMSans_500Medium' },
+  // Looking for
+  lookingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingVertical: 10, borderTopWidth: 1, borderColor: Colors.border, marginTop: 4 },
+  lookingLabel: { fontSize: 12, color: Colors.textTertiary, fontFamily: 'DMSans_500Medium' },
+  lookingValue: { fontSize: 14, color: Colors.text, fontFamily: 'DMSans_600SemiBold' },
 
-  // Sticky action bar
+  // Action bar — redesigned
   actionBar: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 24,
-    paddingVertical: Spacing.lg,
-    paddingBottom: 28,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderColor: Colors.border,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    gap: 20, paddingVertical: 16, paddingBottom: 28,
+    backgroundColor: '#FAFAFA',
+    borderTopWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
   },
-  passBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
-  likeBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
-  likeBtnDisabled: { backgroundColor: Colors.borderDark },
-  commentBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  passBtn: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+  },
+  likeBtn: {
+    width: 68, height: 68, borderRadius: 34,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
+  },
+  likeBtnDisabled: { backgroundColor: Colors.borderDark, shadowOpacity: 0 },
+  commentBtn: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+  },
 
   // Empty
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  emptyIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, marginBottom: 8, letterSpacing: -0.3 },
+  emptyIconWrap: { width: 64, height: 64, borderRadius: 20, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, marginBottom: 6, letterSpacing: -0.3 },
   emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
-  adjustBtn: { backgroundColor: Colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
-  adjustBtnText: { fontSize: 14, color: Colors.primary, fontFamily: 'DMSans_600SemiBold' },
+  adjustBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: Colors.border },
+  adjustBtnText: { fontSize: 14, color: Colors.text, fontFamily: 'DMSans_500Medium' },
 
   // Modals
-  modalOverlayBottom: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  filterCard: { backgroundColor: Colors.background, borderRadius: Radius.xxl, padding: 24, paddingBottom: 36 },
-  filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
-  filterTitle: { fontSize: 18, fontFamily: 'DMSans_700Bold', color: Colors.text, letterSpacing: -0.3 },
+  modalOverlayBottom: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  filterHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginBottom: 16 },
+  filterCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, paddingBottom: 36 },
+  filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  filterTitle: { fontSize: 17, fontFamily: 'DMSans_700Bold', color: Colors.text },
   resetText: { fontSize: 14, color: Colors.primary, fontFamily: 'DMSans_600SemiBold' },
-  filterLabel: { fontSize: 12, fontFamily: 'DMSans_700Bold', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 },
+  filterLabel: { fontSize: 11, fontFamily: 'DMSans_700Bold', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
   filterRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   filterInputWrap: { flex: 1, gap: 6 },
   filterInputLabel: { fontSize: 12, color: Colors.textSecondary, fontFamily: 'DMSans_500Medium' },
-  filterInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: 'DMSans_600SemiBold', color: Colors.text, textAlign: 'center' },
-  filterSep: { fontSize: 18, color: Colors.textTertiary, marginTop: 20 },
+  filterInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: 'DMSans_600SemiBold', color: Colors.text, textAlign: 'center' },
+  filterSep: { fontSize: 18, color: Colors.textTertiary, marginTop: 18 },
   distanceOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  distanceBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border },
+  distanceBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: Colors.border },
   distanceBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
   distanceBtnText: { fontSize: 13, color: Colors.textSecondary, fontFamily: 'DMSans_500Medium' },
   distanceBtnTextActive: { color: Colors.primary, fontFamily: 'DMSans_700Bold' },
-  applyBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 14, alignItems: 'center', marginTop: 24 },
+  applyBtn: { backgroundColor: Colors.primary, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
   applyBtnText: { color: '#fff', fontSize: 15, fontFamily: 'DMSans_700Bold' },
-  cancelFilterBtn: { alignItems: 'center', marginTop: 12, padding: 10 },
+  cancelFilterBtn: { alignItems: 'center', marginTop: 10, padding: 10 },
   cancelFilterText: { fontSize: 14, color: Colors.textSecondary },
-  matchBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 14, width: '100%', alignItems: 'center' },
-  matchBtnText: { color: '#fff', fontSize: 15, fontFamily: 'DMSans_700Bold' },
-  keepBtn: { marginTop: 12, padding: 10 },
-  keepText: { fontSize: 14, color: Colors.textSecondary },
-  commentCard: { backgroundColor: Colors.background, borderRadius: Radius.xxl, padding: 24, paddingBottom: 36 },
-  commentTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, marginBottom: 6, letterSpacing: -0.3 },
+  commentCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, paddingBottom: 36 },
+  commentTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, marginBottom: 4 },
   commentSub: { fontSize: 14, color: Colors.textSecondary, marginBottom: 16, lineHeight: 20 },
-  commentInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.lg, padding: 14, fontSize: 14, color: Colors.text, height: 90, backgroundColor: Colors.surface, marginBottom: 16 },
+  commentInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: 14, padding: 14, fontSize: 15, color: Colors.text, height: 100, backgroundColor: '#FAFAFA', marginBottom: 4, fontFamily: 'DMSans_400Regular' },
 })
