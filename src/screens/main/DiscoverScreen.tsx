@@ -22,7 +22,7 @@ export function DiscoverScreen() {
   const { profiles, loading, likesRemaining, filters, setFilters, likeProfile, passProfile } = useDiscover()
   const { profile: myProfile } = useAuth()
   const [matchModal, setMatchModal] = useState(false)
-  const [commentModal, setCommentModal] = useState<Profile | null>(null)
+  const [commentModal, setCommentModal] = useState<{ profile: Profile; context: string } | null>(null)
   const [filterModal, setFilterModal] = useState(false)
   const [comment, setComment] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -48,7 +48,7 @@ export function DiscoverScreen() {
     )
   }
 
-  async function handleLike(profile: Profile) {
+  async function handleLike(profile: Profile, message?: string) {
     if (likesRemaining <= 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
       Alert.alert('No likes remaining', 'You have used all 4 likes for today. Come back tomorrow!')
@@ -56,7 +56,7 @@ export function DiscoverScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     animateNext()
-    const result = await likeProfile(profile.id)
+    const result = await likeProfile(profile.id, message)
     setCurrentIndex(i => i + 1)
     if (result === 'match') setMatchModal(true)
     if (result === 'conversation_limit') {
@@ -74,12 +74,9 @@ export function DiscoverScreen() {
   async function submitComment() {
     if (!commentModal) return
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    animateNext()
-    const result = await likeProfile(commentModal.id, comment)
+    await handleLike(commentModal.profile, comment || undefined)
     setCommentModal(null)
     setComment('')
-    setCurrentIndex(i => i + 1)
-    if (result === 'match') setMatchModal(true)
   }
 
   function applyFilters() {
@@ -92,7 +89,6 @@ export function DiscoverScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Clean minimal header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Meridian</Text>
         <TouchableOpacity
@@ -104,7 +100,6 @@ export function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Likes remaining — subtle bar */}
       {likesRemaining <= 0 ? (
         <View style={styles.limitBanner}>
           <Ionicons name="time-outline" size={14} color={Colors.textTertiary} />
@@ -119,7 +114,6 @@ export function DiscoverScreen() {
         </View>
       )}
 
-      {/* Card area */}
       {loading ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <SkeletonProfileCard />
@@ -147,14 +141,17 @@ export function DiscoverScreen() {
             distance={getDistance(currentProfile)}
             onLike={() => handleLike(currentProfile)}
             onPass={() => handlePass(currentProfile)}
-            onComment={() => setCommentModal(currentProfile)}
+            onReact={(context) => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              setCommentModal({ profile: currentProfile, context })
+            }}
             likesRemaining={likesRemaining}
           />
           <View style={{ height: 110 }} />
         </Animated.ScrollView>
       )}
 
-      {/* Sticky action bar — redesigned */}
+      {/* Sticky action bar — just pass and like */}
       {currentProfile && !loading && (
         <View style={styles.actionBar}>
           <PressableScale style={styles.passBtn} onPress={() => handlePass(currentProfile)}>
@@ -168,10 +165,6 @@ export function DiscoverScreen() {
             scale={0.92}
           >
             <Ionicons name="heart" size={26} color="#fff" />
-          </PressableScale>
-
-          <PressableScale style={styles.commentBtn} onPress={() => setCommentModal(currentProfile)}>
-            <Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.primary} />
           </PressableScale>
         </View>
       )}
@@ -241,16 +234,21 @@ export function DiscoverScreen() {
         </View>
       </Modal>
 
-      {/* Comment modal */}
+      {/* React to prompt/photo modal */}
       <Modal visible={!!commentModal} transparent animationType="slide">
         <View style={styles.modalOverlayBottom}>
           <View style={styles.commentCard}>
             <View style={styles.filterHandle} />
-            <Text style={styles.commentTitle}>Send a note</Text>
-            <Text style={styles.commentSub}>Stand out — a thoughtful note gets 3× more responses.</Text>
+            {commentModal?.context && (
+              <View style={styles.contextPreview}>
+                <Text style={styles.contextText} numberOfLines={2}>"{commentModal.context}"</Text>
+              </View>
+            )}
+            <Text style={styles.commentTitle}>Add a note</Text>
+            <Text style={styles.commentSub}>Or just like without a note.</Text>
             <TextInput
               style={styles.commentInput}
-              placeholder="What caught your eye?"
+              placeholder="Say something..."
               placeholderTextColor={Colors.textTertiary}
               value={comment}
               onChangeText={setComment}
@@ -260,9 +258,11 @@ export function DiscoverScreen() {
               autoFocus
             />
             <TouchableOpacity style={styles.applyBtn} onPress={submitComment}>
-              <Text style={styles.applyBtnText}>Like with note</Text>
+              <Text style={styles.applyBtnText}>
+                {comment.trim() ? 'Like with note' : 'Like'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelFilterBtn} onPress={() => setCommentModal(null)}>
+            <TouchableOpacity style={styles.cancelFilterBtn} onPress={() => { setCommentModal(null); setComment('') }}>
               <Text style={styles.cancelFilterText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -272,26 +272,29 @@ export function DiscoverScreen() {
   )
 }
 
-function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemaining }: {
+function ProfileCard({ profile, distance, onLike, onPass, onReact, likesRemaining }: {
   profile: Profile
   distance: string
   onLike: () => void
   onPass: () => void
-  onComment: () => void
+  onReact: (context: string) => void
   likesRemaining: number
 }) {
   const salaryLabel = profile.salary_range ? SALARY_BADGE_LABELS[profile.salary_range] : null
 
   return (
     <View style={styles.profileWrap}>
-      {/* Hero photo — full bleed, no border radius on top */}
-      <View style={styles.heroCard}>
+      {/* Hero photo */}
+      <TouchableOpacity
+        activeOpacity={0.95}
+        onPress={() => onReact(`${profile.first_name}'s photo`)}
+        style={styles.heroCard}
+      >
         <PhotoCarousel
           photos={profile.photos ?? []}
           height={width * 1.25}
           name={profile.first_name}
         />
-        {/* Name overlay — sits on photo */}
         <View style={styles.photoOverlay}>
           <View style={styles.nameRow}>
             <View style={{ flex: 1 }}>
@@ -311,12 +314,16 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
             </View>
           )}
         </View>
-      </View>
+        {/* Tap to react hint on photo */}
+        <View style={styles.photoReactHint}>
+          <Ionicons name="heart-outline" size={14} color="rgba(255,255,255,0.7)" />
+        </View>
+      </TouchableOpacity>
 
-      {/* Career — clean, no border card */}
+      {/* Career */}
       {(profile.job_title || profile.industry) && (
         <View style={styles.infoRow}>
-          <Ionicons name="briefcase-outline" size={15} color={Colors.textTertiary} />
+          <Ionicons name="briefcase-outline" size={14} color={Colors.textTertiary} />
           <Text style={styles.infoText}>
             {profile.job_title}{profile.company ? ` · ${profile.company}` : ''}
             {profile.industry ? `  ·  ${profile.industry}` : ''}
@@ -324,26 +331,42 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
         </View>
       )}
 
-      {/* Prompts — the centerpiece */}
+      {/* Prompts — tappable */}
       {profile.prompts?.slice(0, 1).map((p, i) => (
-        <View key={i} style={styles.promptCard}>
+        <TouchableOpacity
+          key={i}
+          style={styles.promptCard}
+          onPress={() => onReact(p.answer)}
+          activeOpacity={0.85}
+        >
           <Text style={styles.promptQ}>{p.question}</Text>
           <Text style={styles.promptA}>{p.answer}</Text>
-        </View>
+          <View style={styles.promptReactHint}>
+            <Ionicons name="heart-outline" size={14} color={Colors.primary} />
+            <Text style={styles.promptReactText}>React</Text>
+          </View>
+        </TouchableOpacity>
       ))}
 
-      {/* Second photo */}
+      {/* Second photo — tappable */}
       {(profile.photos ?? []).length > 1 && (
-        <View style={styles.secondPhoto}>
+        <TouchableOpacity
+          activeOpacity={0.95}
+          onPress={() => onReact(`${profile.first_name}'s photo`)}
+          style={styles.secondPhoto}
+        >
           <PhotoCarousel
             photos={(profile.photos ?? []).slice(1)}
             height={width * 0.9}
             name={profile.first_name}
           />
-        </View>
+          <View style={styles.photoReactHint}>
+            <Ionicons name="heart-outline" size={14} color="rgba(255,255,255,0.7)" />
+          </View>
+        </TouchableOpacity>
       )}
 
-      {/* Work style tags — minimal */}
+      {/* Work style tags */}
       {profile.work_style?.length > 0 && (
         <View style={styles.tagsRow}>
           {profile.work_style.slice(0, 3).map(w => (
@@ -371,35 +394,21 @@ function ProfileCard({ profile, distance, onLike, onPass, onComment, likesRemain
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FAFAFA' },
-
-  // Header
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   headerTitle: { fontSize: 22, fontFamily: 'DMSans_700Bold', color: Colors.navy, letterSpacing: -0.5 },
   filterBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2, position: 'relative' },
   filterBtnActive: { backgroundColor: Colors.primaryLight },
   filterDot: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary },
-
-  // Likes bar
   likesBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 8, gap: 6 },
   likesDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
   likesDotActive: { backgroundColor: Colors.primary },
   likesBarText: { fontSize: 12, fontFamily: 'DMSans_400Regular', color: Colors.textTertiary, marginLeft: 4 },
   limitBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingBottom: 8 },
   limitText: { fontSize: 12, color: Colors.textTertiary },
-
-  // Scroll
   scrollContent: { paddingHorizontal: 16, paddingTop: 4 },
-
-  // Profile
   profileWrap: { gap: 2 },
-
-  // Hero card
   heroCard: { borderRadius: 20, overflow: 'hidden', position: 'relative' },
-  photoOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    padding: 16, paddingBottom: 20,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-  },
+  photoOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 20, backgroundColor: 'rgba(0,0,0,0.38)' },
   nameRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   photoName: { fontSize: 30, fontFamily: 'DMSans_700Bold', color: '#fff', letterSpacing: -0.8, lineHeight: 34 },
   photoLocation: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontFamily: 'DMSans_400Regular' },
@@ -407,69 +416,31 @@ const styles = StyleSheet.create({
   salaryChipText: { fontSize: 12, fontFamily: 'DMSans_600SemiBold', color: '#fff' },
   verifiedChip: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 8, backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
   verifiedChipText: { fontSize: 11, fontFamily: 'DMSans_600SemiBold', color: '#fff' },
-
-  // Info row
+  photoReactHint: { position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 10 },
   infoText: { fontSize: 13, color: Colors.textSecondary, fontFamily: 'DMSans_400Regular', flex: 1 },
-
-  // Prompt card
   promptCard: { backgroundColor: '#fff', borderRadius: 16, padding: 18, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 1, marginVertical: 4 },
   promptQ: { fontSize: 11, fontFamily: 'DMSans_700Bold', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 0.8 },
   promptA: { fontSize: 18, color: Colors.text, lineHeight: 26, fontFamily: 'DMSans_500Medium' },
-
-  // Second photo
-  secondPhoto: { borderRadius: 16, overflow: 'hidden', marginVertical: 4 },
-
-  // Tags
+  promptReactHint: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginTop: 4 },
+  promptReactText: { fontSize: 12, color: Colors.primary, fontFamily: 'DMSans_500Medium' },
+  secondPhoto: { borderRadius: 16, overflow: 'hidden', marginVertical: 4, position: 'relative' },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 2, paddingVertical: 6 },
   tag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: Colors.border },
   tagText: { fontSize: 13, color: Colors.textSecondary, fontFamily: 'DMSans_400Regular' },
-
-  // Looking for
   lookingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingVertical: 10, borderTopWidth: 1, borderColor: Colors.border, marginTop: 4 },
   lookingLabel: { fontSize: 12, color: Colors.textTertiary, fontFamily: 'DMSans_500Medium' },
   lookingValue: { fontSize: 14, color: Colors.text, fontFamily: 'DMSans_600SemiBold' },
-
-  // Action bar — redesigned
-  actionBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    gap: 20, paddingVertical: 16, paddingBottom: 28,
-    backgroundColor: '#FAFAFA',
-    borderTopWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
-  },
-  passBtn: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#fff',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
-  },
-  likeBtn: {
-    width: 68, height: 68, borderRadius: 34,
-    backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
-  },
+  actionBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24, paddingVertical: 16, paddingBottom: 28, backgroundColor: '#FAFAFA', borderTopWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
+  passBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  likeBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6 },
   likeBtnDisabled: { backgroundColor: Colors.borderDark, shadowOpacity: 0 },
-  commentBtn: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#fff',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
-  },
-
-  // Empty
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyIconWrap: { width: 64, height: 64, borderRadius: 20, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, marginBottom: 6, letterSpacing: -0.3 },
   emptySub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
   adjustBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: Colors.border },
   adjustBtnText: { fontSize: 14, color: Colors.text, fontFamily: 'DMSans_500Medium' },
-
-  // Modals
   modalOverlayBottom: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   filterHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginBottom: 16 },
   filterCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, paddingBottom: 36 },
@@ -492,7 +463,9 @@ const styles = StyleSheet.create({
   cancelFilterBtn: { alignItems: 'center', marginTop: 10, padding: 10 },
   cancelFilterText: { fontSize: 14, color: Colors.textSecondary },
   commentCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, paddingBottom: 36 },
-  commentTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, marginBottom: 4 },
-  commentSub: { fontSize: 14, color: Colors.textSecondary, marginBottom: 16, lineHeight: 20 },
-  commentInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: 14, padding: 14, fontSize: 15, color: Colors.text, height: 100, backgroundColor: '#FAFAFA', marginBottom: 4, fontFamily: 'DMSans_400Regular' },
+  contextPreview: { backgroundColor: Colors.surface, borderRadius: 12, padding: 12, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: Colors.primary },
+  contextText: { fontSize: 14, color: Colors.textSecondary, fontFamily: 'DMSans_400Regular', fontStyle: 'italic', lineHeight: 20 },
+  commentTitle: { fontSize: 20, fontFamily: 'DMSans_700Bold', color: Colors.text, marginBottom: 2 },
+  commentSub: { fontSize: 14, color: Colors.textSecondary, marginBottom: 14 },
+  commentInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: 14, padding: 14, fontSize: 15, color: Colors.text, height: 90, backgroundColor: '#FAFAFA', marginBottom: 4, fontFamily: 'DMSans_400Regular' },
 })
