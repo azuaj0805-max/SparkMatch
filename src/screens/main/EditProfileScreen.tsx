@@ -127,7 +127,7 @@ export function EditProfileScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <Text style={styles.photoHint}>Tap ✕ to remove a photo · Up to 6 photos</Text>
+        <Text style={styles.photoHint}>Tap X to remove a photo. Up to 6 photos.</Text>
 
         {/* Basic info */}
         <Text style={styles.sectionTitle}>Basic info</Text>

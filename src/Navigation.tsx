@@ -84,7 +84,7 @@ function CustomTabBar({ state, navigation }: any) {
               </View>
               {tab.badge > 0 && (
                 <View style={tabStyles.badgeDot}>
-                  <Text style={tabStyles.badgeText}>{tab.badge > 9 ? '9+' : tab.badge}</Text>
+                  <Text style={tabStyles.badgeText}>{tab.badge > 9 ? '9+' : String(tab.badge)}</Text>
                 </View>
               )}
             </View>

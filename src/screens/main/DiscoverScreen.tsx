@@ -150,7 +150,8 @@ export function DiscoverScreen() {
             onComment={() => setCommentModal(currentProfile)}
             likesRemaining={likesRemaining}
           />
-          </Animated.View>        </ScrollView>
+          </Animated.View>
+        </ScrollView>
       )}
 
       {/* Sticky action bar */}

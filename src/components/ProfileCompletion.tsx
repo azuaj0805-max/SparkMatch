@@ -43,7 +43,7 @@ export function ProfileCompletion({ profile }: { profile: Profile }) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.title}>Complete your profile</Text>
-          <Text style={styles.sub}>{done} of {total} complete · {percent}%</Text>
+          <Text style={styles.sub}>{`${done} of ${total} complete · ${percent}%`}</Text>
         </View>
         <Text style={styles.percent}>{percent}%</Text>
       </View>
@@ -67,7 +67,7 @@ export function ProfileCompletion({ profile }: { profile: Profile }) {
       </View>
 
       <View style={styles.cta}>
-        <Text style={styles.ctaText}>Complete profile →</Text>
+        <Text style={styles.ctaText}>Complete profile</Text>
       </View>
     </TouchableOpacity>
   )

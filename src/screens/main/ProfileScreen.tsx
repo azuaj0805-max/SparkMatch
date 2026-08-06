@@ -188,7 +188,8 @@ export function ProfileScreen() {
             <Ionicons name="pencil-outline" size={14} color={Colors.primary} />
             <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
-        </View>      </View>
+        </View>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScroll}>
         <View style={styles.profileHero}>
