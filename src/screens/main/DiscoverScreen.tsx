@@ -151,24 +151,14 @@ export function DiscoverScreen() {
         </Animated.ScrollView>
       )}
 
-      {/* Sticky action bar — just pass and like */}
+      {/* Pass button only — like by tapping photo or prompt */}
       {currentProfile && !loading && (
         <View style={styles.actionBar}>
           <PressableScale style={styles.passBtn} onPress={() => handlePass(currentProfile)}>
             <Ionicons name="close" size={22} color={Colors.textSecondary} />
           </PressableScale>
-
-          <PressableScale
-            style={[styles.likeBtn, likesRemaining <= 0 && styles.likeBtnDisabled]}
-            onPress={() => handleLike(currentProfile)}
-            disabled={likesRemaining <= 0}
-            scale={0.92}
-          >
-            <Ionicons name="heart" size={26} color="#fff" />
-          </PressableScale>
         </View>
       )}
-
       <MatchModal
         visible={matchModal}
         onSendMessage={() => setMatchModal(false)}
