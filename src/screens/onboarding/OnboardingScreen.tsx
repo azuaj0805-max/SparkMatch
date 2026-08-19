@@ -1,46 +1,52 @@
 import React, { useState, useRef } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Animated, Dimensions,
+  ScrollView, Alert, ActivityIndicator, Animated, Dimensions, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { ChipGroup } from '../../components/Chip'
 import { Colors, Spacing, Radius } from '../../lib/styles'
 import { SalaryRange, SALARY_LABELS, LookingFor, LOOKING_FOR_LABELS } from '../../types'
 
-const { width } = Dimensions.get('window')
+const { width, height } = Dimensions.get('window')
 
-const TOTAL_STEPS = 11
+const TOTAL_STEPS = 12
 const INDUSTRIES = ['Tech','Finance','Consulting','Healthcare','Law','Media','Real Estate','Education','Other']
 const WORK_STYLES = ['High growth','Work-life balance','Startup minded','Corporate path','Remote first','In-office','Open to relocate','Entrepreneur']
 const GENDERS = ['Man','Woman','Non-binary','Genderqueer / Genderfluid','Prefer to self-describe']
-const ORIENTATIONS = ['Straight / Heterosexual','Gay','Lesbian','Bisexual','Pansexual','Asexual','Queer','Prefer not to say']
+const ORIENTATIONS = ['Straight','Gay','Lesbian','Bisexual','Pansexual','Asexual','Queer','Prefer not to say']
 const INTERESTED_IN = ['Men','Women','Non-binary people','Everyone']
 const REL_STYLES = ['Monogamous','Ethically non-monogamous','Still figuring it out']
-const KIDS_OPTIONS = ["Don't have, don't want","Don't have, open to it","Have kids","Want kids someday"]
-const DRINKING_OPTIONS = ['Never','Rarely','Socially','Regularly']
-const SMOKING_OPTIONS = ['Never','Socially','Yes','Prefer not to say']
-const RELIGIONS = ['Christian','Jewish','Muslim','Hindu','Spiritual','Agnostic / Atheist','Buddhist','Other','Not important']
 const SALARY_OPTIONS = Object.entries(SALARY_LABELS) as [SalaryRange, string][]
 const LOOKING_FOR_OPTIONS = Object.entries(LOOKING_FOR_LABELS) as [LookingFor, string][]
-const PROMPT_QUESTIONS = ["My 5-year goal","I'm looking for","Most ambitious thing I've done","Best career advice I got"]
+const PROMPT_QUESTIONS = [
+  "My 5-year goal",
+  "The most ambitious thing I've done",
+  "Best career advice I've received",
+  "What I'm looking for",
+  "My work style in three words",
+  "What makes me different",
+  "My biggest passion outside of work",
+]
 
 const STEPS = [
-  { tag: 'About you', title: "What's your\nname?", sub: "This is how you'll appear on Meridian." },
-  { tag: 'Career', title: 'Your career', sub: "This is what sets Meridian apart from every other dating app." },
-  { tag: 'Identity', title: 'How do you\nidentify?', sub: "Helps us show you to the right people." },
-  { tag: 'Identity', title: 'Sexual\norientation', sub: "Select all that apply." },
-  { tag: 'Preferences', title: 'Who do you\nwant to see?', sub: "Select all you're open to." },
-  { tag: 'Dating goals', title: 'What are you\nlooking for?', sub: "Be honest — it helps match you with people on the same page." },
-  { tag: 'Dating goals', title: 'Relationship\nstyle', sub: "Select all that apply." },
-  { tag: 'Lifestyle', title: 'A few more\nabout you', sub: "These help filter for compatibility." },
-  { tag: 'Work style', title: 'Your work\nstyle', sub: "Pick all that describe you." },
-  { tag: 'Your voice', title: 'Answer a\nprompt', sub: "Prompts get 3× more engagement than photos alone." },
-  { tag: 'Welcome', title: "You're all\nset! 🎉", sub: "Start discovering people who match your ambition." },
+  { tag: 'Welcome', title: "Let's build\nyour profile.", sub: null },
+  { tag: 'About you', title: "What's your\nname?", sub: null },
+  { tag: 'Career', title: "What do\nyou do?", sub: "This is what sets Meridian apart." },
+  { tag: 'Career', title: "Your salary\nrange", sub: "Only shown to verified matches." },
+  { tag: 'Identity', title: "How do you\nidentify?", sub: null },
+  { tag: 'Preferences', title: "Who do you\nwant to meet?", sub: null },
+  { tag: 'Dating goals', title: "What are you\nlooking for?", sub: "Be honest. It helps." },
+  { tag: 'Work style', title: "Your work\nstyle", sub: null },
+  { tag: 'Photos', title: "Add 5 photos.", sub: "Required. Profiles with photos get 10× more matches." },
+  { tag: 'Prompts', title: "Answer 3\nprompts.", sub: "Required. Let people know who you are." },
+  { tag: 'Prompts', title: null, sub: null },
+  { tag: 'Prompts', title: null, sub: null },
 ]
 
 export function OnboardingScreen() {
@@ -59,37 +65,66 @@ export function OnboardingScreen() {
   const [salaryRange, setSalaryRange] = useState<SalaryRange | null>(null)
   const [gender, setGender] = useState<string[]>([])
   const [orientation, setOrientation] = useState<string[]>([])
-  const [showOrientation, setShowOrientation] = useState(true)
   const [interestedIn, setInterestedIn] = useState<string[]>([])
   const [lookingFor, setLookingFor] = useState<LookingFor | null>(null)
   const [relStyle, setRelStyle] = useState<string[]>([])
-  const [kids, setKids] = useState<string[]>([])
-  const [drinking, setDrinking] = useState<string[]>([])
-  const [smoking, setSmoking] = useState<string[]>([])
-  const [religion, setReligion] = useState<string[]>([])
   const [workStyle, setWorkStyle] = useState<string[]>([])
-  const [minPartnerSalary, setMinPartnerSalary] = useState(0)
-  const [promptQuestion, setPromptQuestion] = useState(PROMPT_QUESTIONS[0])
-  const [promptAnswer, setPromptAnswer] = useState('')
+  const [photos, setPhotos] = useState<string[]>([])
+  const [photoBase64s, setPhotoBase64s] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [prompts, setPrompts] = useState([
+    { question: PROMPT_QUESTIONS[0], answer: '' },
+    { question: PROMPT_QUESTIONS[1], answer: '' },
+    { question: PROMPT_QUESTIONS[2], answer: '' },
+  ])
 
   function animateToStep(next: number) {
     const direction = next > step ? 1 : -1
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
 
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: -30 * direction, duration: 150, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: -24 * direction, duration: 120, useNativeDriver: true }),
     ]).start(() => {
       setStep(next)
-      slideAnim.setValue(30 * direction)
+      slideAnim.setValue(24 * direction)
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 4 }),
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 3 }),
       ]).start()
     })
   }
 
+  function validateStep(): boolean {
+    if (step === 1 && (!firstName.trim() || !age || !city.trim())) {
+      Alert.alert('Required', 'Please fill in your name, age, and city.')
+      return false
+    }
+    if (step === 2 && !jobTitle.trim()) {
+      Alert.alert('Required', 'Please enter your job title.')
+      return false
+    }
+    if (step === 8 && photos.length < 5) {
+      Alert.alert('5 photos required', `Please add ${5 - photos.length} more photo${5 - photos.length !== 1 ? 's' : ''}.`)
+      return false
+    }
+    if (step === 9 && !prompts[0].answer.trim()) {
+      Alert.alert('Required', 'Please answer this prompt.')
+      return false
+    }
+    if (step === 10 && !prompts[1].answer.trim()) {
+      Alert.alert('Required', 'Please answer this prompt.')
+      return false
+    }
+    if (step === 11 && !prompts[2].answer.trim()) {
+      Alert.alert('Required', 'Please answer this prompt.')
+      return false
+    }
+    return true
+  }
+
   function nextStep() {
+    if (!validateStep()) return
     if (step < TOTAL_STEPS - 1) animateToStep(step + 1)
     else saveProfile()
   }
@@ -98,50 +133,114 @@ export function OnboardingScreen() {
     if (step > 0) animateToStep(step - 1)
   }
 
+  async function pickPhoto() {
+    if (photos.length >= 6) { Alert.alert('Maximum 6 photos'); return }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permission.granted) { Alert.alert('Permission required', 'Please allow photo access.'); return }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    })
+
+    if (result.canceled || !result.assets[0]) return
+    const asset = result.assets[0]
+    if (!asset.base64) return
+
+    setPhotos(prev => [...prev, asset.uri])
+    setPhotoBase64s(prev => [...prev, asset.base64!])
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+  }
+
+  function removePhoto(index: number) {
+    setPhotos(prev => prev.filter((_, i) => i !== index))
+    setPhotoBase64s(prev => prev.filter((_, i) => i !== index))
+  }
+
+  async function uploadPhotos(): Promise<string[]> {
+    const urls: string[] = []
+    for (let i = 0; i < photoBase64s.length; i++) {
+      const base64 = photoBase64s[i]
+      const fileName = `${session?.user.id}/${Date.now()}_${i}.jpg`
+      const byteCharacters = atob(base64)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let j = 0; j < byteCharacters.length; j++) {
+        byteNumbers[j] = byteCharacters.charCodeAt(j)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
+      const { error } = await supabase.storage
+        .from('Photos')
+        .upload(fileName, byteArray, { contentType: 'image/jpeg', upsert: true })
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('Photos').getPublicUrl(fileName)
+        urls.push(publicUrl)
+      }
+    }
+    return urls
+  }
+
   async function saveProfile() {
     if (!session) return
     setSaving(true)
+    setUploading(true)
+
+    let photoUrls: string[] = []
+    try {
+      photoUrls = await uploadPhotos()
+    } catch (e) {
+      Alert.alert('Photo upload failed', 'Please try again.')
+      setSaving(false)
+      setUploading(false)
+      return
+    }
+    setUploading(false)
+
     const { error } = await supabase.from('profiles').upsert({
       id: session.user.id,
-      first_name: firstName,
+      first_name: firstName.trim(),
       age: parseInt(age) || 0,
-      city, job_title: jobTitle, company,
+      city: city.trim(),
+      job_title: jobTitle.trim(),
+      company: company.trim(),
       industry: industry[0] ?? null,
       salary_range: salaryRange,
       work_style: workStyle,
       gender: gender[0] ?? null,
-      orientation, show_orientation: showOrientation,
+      orientation,
+      show_orientation: true,
       interested_in: interestedIn,
       looking_for: lookingFor,
       relationship_style: relStyle,
-      has_kids: kids[0] ?? null,
-      drinking: drinking[0] ?? null,
-      smoking: smoking[0] ?? null,
-      religion: religion[0] ?? null,
-      min_partner_salary: minPartnerSalary,
-      prompts: [{ question: promptQuestion, answer: promptAnswer }],
-      photos: [], salary_verified: false,
+      prompts,
+      photos: photoUrls,
+      salary_verified: false,
       updated_at: new Date().toISOString(),
     })
+
     setSaving(false)
-    if (error) { Alert.alert('Error saving profile', error.message); return }
+    if (error) { Alert.alert('Error', error.message); return }
     await refreshProfile()
   }
 
-  const progress = (step / (TOTAL_STEPS - 1)) * 100
+  const progress = step / (TOTAL_STEPS - 1)
   const currentStep = STEPS[step]
+
+  const isPromptStep = step >= 9
+  const promptIndex = step - 9
 
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Progress bar */}
-      <View style={styles.progressHeader}>
+      <View style={styles.topBar}>
         {step > 0 && (
           <TouchableOpacity onPress={prevStep} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={Colors.text} />
           </TouchableOpacity>
         )}
-        <View style={[styles.progressTrack, step === 0 && { marginLeft: 0 }]}>
-          <Animated.View style={[styles.progressFill, { width: `${progress}%` }]} />
+        <View style={styles.progressTrack}>
+          <Animated.View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
         </View>
       </View>
 
@@ -151,48 +250,133 @@ export function OnboardingScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Animated step header */}
-        <Animated.View style={[styles.stepHeader, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Text style={styles.stepTag}>{currentStep.tag}</Text>
-          <Text style={styles.title}>{currentStep.title}</Text>
-          <Text style={styles.sub}>{currentStep.sub}</Text>
-        </Animated.View>
+        {/* Step header */}
+        {!isPromptStep && (
+          <Animated.View style={[styles.stepHeader, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <Text style={styles.stepTag}>{currentStep.tag}</Text>
+            <Text style={styles.title}>{currentStep.title}</Text>
+            {currentStep.sub && <Text style={styles.sub}>{currentStep.sub}</Text>}
+          </Animated.View>
+        )}
 
         {/* Step content */}
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
+          {/* Step 0 — Welcome */}
           {step === 0 && (
-            <View style={styles.fields}>
-              <View style={styles.inputWrap}>
-                <Text style={styles.inputLabel}>First name</Text>
-                <TextInput style={styles.input} placeholder="Your name" value={firstName} onChangeText={setFirstName} placeholderTextColor={Colors.textTertiary} />
+            <View style={styles.welcomeWrap}>
+              <View style={styles.logoWrap}>
+                <Text style={styles.logoLetter}>M</Text>
               </View>
-              <View style={styles.inputWrap}>
-                <Text style={styles.inputLabel}>Age</Text>
-                <TextInput style={styles.input} placeholder="Your age" value={age} onChangeText={setAge} keyboardType="number-pad" placeholderTextColor={Colors.textTertiary} />
-              </View>
-              <View style={styles.inputWrap}>
-                <Text style={styles.inputLabel}>City</Text>
-                <TextInput style={styles.input} placeholder="Where you live" value={city} onChangeText={setCity} placeholderTextColor={Colors.textTertiary} />
+              <Text style={styles.welcomeTitle}>Welcome to{'\n'}Meridian.</Text>
+              <Text style={styles.welcomeSub}>
+                The dating app built for ambitious people. We take 5 minutes to set up — and it's worth it.
+              </Text>
+              <View style={styles.requirementCards}>
+                <View style={styles.requirementCard}>
+                  <Ionicons name="camera-outline" size={20} color={Colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.reqTitle}>5 photos required</Text>
+                    <Text style={styles.reqSub}>So people know who they're talking to</Text>
+                  </View>
+                </View>
+                <View style={styles.requirementCard}>
+                  <Ionicons name="chatbubble-outline" size={20} color={Colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.reqTitle}>3 prompts required</Text>
+                    <Text style={styles.reqSub}>So your personality comes through</Text>
+                  </View>
+                </View>
+                <View style={styles.requirementCard}>
+                  <Ionicons name="briefcase-outline" size={20} color={Colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.reqTitle}>Career details</Text>
+                    <Text style={styles.reqSub}>What makes Meridian different</Text>
+                  </View>
+                </View>
               </View>
             </View>
           )}
 
+          {/* Step 1 — Name/Age/City */}
           {step === 1 && (
             <View style={styles.fields}>
-              <View style={styles.inputWrap}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>First name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your name"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholderTextColor={Colors.textTertiary}
+                  autoFocus
+                />
+              </View>
+              <View style={styles.inputRow2}>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Age</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="25"
+                    value={age}
+                    onChangeText={setAge}
+                    keyboardType="number-pad"
+                    placeholderTextColor={Colors.textTertiary}
+                    maxLength={2}
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 2 }]}>
+                  <Text style={styles.inputLabel}>City</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Austin, TX"
+                    value={city}
+                    onChangeText={setCity}
+                    placeholderTextColor={Colors.textTertiary}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Step 2 — Career */}
+          {step === 2 && (
+            <View style={styles.fields}>
+              <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Job title</Text>
-                <TextInput style={styles.input} placeholder="What you do" value={jobTitle} onChangeText={setJobTitle} placeholderTextColor={Colors.textTertiary} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Software Engineer"
+                  value={jobTitle}
+                  onChangeText={setJobTitle}
+                  placeholderTextColor={Colors.textTertiary}
+                  autoFocus
+                />
               </View>
-              <View style={styles.inputWrap}>
-                <Text style={styles.inputLabel}>Company</Text>
-                <TextInput style={styles.input} placeholder="Where you work" value={company} onChangeText={setCompany} placeholderTextColor={Colors.textTertiary} />
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Company <Text style={styles.optional}>(optional)</Text></Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Google"
+                  value={company}
+                  onChangeText={setCompany}
+                  placeholderTextColor={Colors.textTertiary}
+                />
               </View>
-              <Text style={styles.fieldLabel}>Industry</Text>
+              <Text style={styles.fieldSectionLabel}>Industry</Text>
               <ChipGroup options={INDUSTRIES} selected={industry} onChange={(v) => setIndustry(v.slice(-1))} single />
-              <Text style={[styles.fieldLabel, { marginTop: Spacing.lg }]}>Salary range</Text>
+            </View>
+          )}
+
+          {/* Step 3 — Salary */}
+          {step === 3 && (
+            <View style={styles.fields}>
               {SALARY_OPTIONS.map(([key, label]) => (
-                <TouchableOpacity key={key} style={[styles.optRow, salaryRange === key && styles.optRowOn]} onPress={() => setSalaryRange(key)}>
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.optRow, salaryRange === key && styles.optRowOn]}
+                  onPress={() => setSalaryRange(key)}
+                >
                   <Text style={[styles.optText, salaryRange === key && styles.optTextOn]}>{label}</Text>
                   {salaryRange === key && <Ionicons name="checkmark" size={18} color={Colors.primary} />}
                 </TouchableOpacity>
@@ -200,30 +384,30 @@ export function OnboardingScreen() {
             </View>
           )}
 
-          {step === 2 && (
-            <ChipGroup options={GENDERS} selected={gender} onChange={(v) => setGender(v.slice(-1))} single columns={1} />
-          )}
-
-          {step === 3 && (
-            <View>
-              <ChipGroup options={ORIENTATIONS} selected={orientation} onChange={setOrientation} columns={1} />
-              <TouchableOpacity style={styles.toggleRow} onPress={() => setShowOrientation(v => !v)}>
-                <View style={[styles.toggle, showOrientation && styles.toggleOn]}>
-                  <View style={[styles.toggleThumb, showOrientation && styles.toggleThumbOn]} />
-                </View>
-                <Text style={styles.toggleLabel}>Show orientation on my profile</Text>
-              </TouchableOpacity>
+          {/* Step 4 — Identity */}
+          {step === 4 && (
+            <View style={styles.fields}>
+              <Text style={styles.fieldSectionLabel}>Gender</Text>
+              <ChipGroup options={GENDERS} selected={gender} onChange={(v) => setGender(v.slice(-1))} single columns={1} />
+              <Text style={[styles.fieldSectionLabel, { marginTop: 16 }]}>Orientation <Text style={styles.optional}>(optional)</Text></Text>
+              <ChipGroup options={ORIENTATIONS} selected={orientation} onChange={setOrientation} />
             </View>
           )}
 
-          {step === 4 && (
+          {/* Step 5 — Preferences */}
+          {step === 5 && (
             <ChipGroup options={INTERESTED_IN} selected={interestedIn} onChange={setInterestedIn} columns={1} />
           )}
 
-          {step === 5 && (
-            <View>
+          {/* Step 6 — Looking for */}
+          {step === 6 && (
+            <View style={styles.fields}>
               {LOOKING_FOR_OPTIONS.map(([key, label]) => (
-                <TouchableOpacity key={key} style={[styles.optRow, lookingFor === key && styles.optRowOn]} onPress={() => setLookingFor(key)}>
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.optRow, lookingFor === key && styles.optRowOn]}
+                  onPress={() => setLookingFor(key)}
+                >
                   <Text style={[styles.optText, lookingFor === key && styles.optTextOn]}>{label}</Text>
                   {lookingFor === key && <Ionicons name="checkmark" size={18} color={Colors.primary} />}
                 </TouchableOpacity>
@@ -231,129 +415,184 @@ export function OnboardingScreen() {
             </View>
           )}
 
-          {step === 6 && (
-            <ChipGroup options={REL_STYLES} selected={relStyle} onChange={setRelStyle} columns={1} />
+          {/* Step 7 — Work style */}
+          {step === 7 && (
+            <ChipGroup options={WORK_STYLES} selected={workStyle} onChange={setWorkStyle} />
           )}
 
-          {step === 7 && (
+          {/* Step 8 — Photos */}
+          {step === 8 && (
             <View style={styles.fields}>
-              <Text style={styles.fieldLabel}>Kids</Text>
-              <ChipGroup options={KIDS_OPTIONS} selected={kids} onChange={(v) => setKids(v.slice(-1))} single />
-              <Text style={[styles.fieldLabel, { marginTop: Spacing.lg }]}>Drinking</Text>
-              <ChipGroup options={DRINKING_OPTIONS} selected={drinking} onChange={(v) => setDrinking(v.slice(-1))} single />
-              <Text style={[styles.fieldLabel, { marginTop: Spacing.lg }]}>Smoking / cannabis</Text>
-              <ChipGroup options={SMOKING_OPTIONS} selected={smoking} onChange={(v) => setSmoking(v.slice(-1))} single />
-              <Text style={[styles.fieldLabel, { marginTop: Spacing.lg }]}>Religion</Text>
-              <ChipGroup options={RELIGIONS} selected={religion} onChange={(v) => setReligion(v.slice(-1))} single />
+              <View style={styles.photoRequirement}>
+                <Text style={styles.photoCount}>{photos.length}/5</Text>
+                <Text style={styles.photoCountLabel}>photos added{photos.length >= 5 ? ' ✓' : ' required'}</Text>
+              </View>
+              <View style={styles.photoGrid}>
+                {photos.map((uri, i) => (
+                  <View key={i} style={styles.photoThumb}>
+                    <Image source={{ uri }} style={styles.photoThumbImg} resizeMode="cover" />
+                    <TouchableOpacity style={styles.photoRemove} onPress={() => removePhoto(i)}>
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {photos.length < 6 && (
+                  <TouchableOpacity style={styles.photoAdd} onPress={pickPhoto}>
+                    <Ionicons name="camera-outline" size={24} color={Colors.primary} />
+                    <Text style={styles.photoAddText}>Add photo</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={styles.photoHint}>
+                Add at least 5 photos. Clear, recent photos with your face visible perform best.
+              </Text>
             </View>
           )}
 
-          {step === 8 && (
+          {/* Steps 9-11 — 3 Prompts */}
+          {isPromptStep && (
             <View style={styles.fields}>
-              <ChipGroup options={WORK_STYLES} selected={workStyle} onChange={setWorkStyle} />
-              <Text style={[styles.fieldLabel, { marginTop: Spacing.lg }]}>Minimum salary preference in a partner</Text>
-              <View style={styles.salarySteps}>
-                {[0,40,60,80,100,150,200].map(val => (
-                  <TouchableOpacity key={val} style={[styles.stepBtn, minPartnerSalary === val && styles.stepBtnOn]} onPress={() => setMinPartnerSalary(val)}>
-                    <Text style={[styles.stepBtnText, minPartnerSalary === val && styles.stepBtnTextOn]}>
-                      {val === 0 ? 'Any' : `$${val}k`}
+              <Text style={styles.stepTag}>Prompt {promptIndex + 1} of 3</Text>
+              <Text style={styles.title}>Answer a{'\n'}prompt.</Text>
+              <Text style={styles.sub}>Required. Choose a question and write your answer.</Text>
+
+              <Text style={styles.fieldSectionLabel}>Choose a question</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.promptScroll}>
+                {PROMPT_QUESTIONS.map((q, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.promptChip, prompts[promptIndex].question === q && styles.promptChipOn]}
+                    onPress={() => {
+                      const updated = [...prompts]
+                      updated[promptIndex] = { ...updated[promptIndex], question: q }
+                      setPrompts(updated)
+                    }}
+                  >
+                    <Text style={[styles.promptChipText, prompts[promptIndex].question === q && styles.promptChipTextOn]}>
+                      {q}
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </View>
-            </View>
-          )}
+              </ScrollView>
 
-          {step === 9 && (
-            <View style={styles.fields}>
-              <ChipGroup options={PROMPT_QUESTIONS} selected={[promptQuestion]} onChange={(v) => setPromptQuestion(v[0])} single columns={1} />
-              <TextInput
-                style={[styles.input, styles.textarea]}
-                placeholder="Write your answer here..."
-                placeholderTextColor={Colors.textTertiary}
-                value={promptAnswer}
-                onChangeText={setPromptAnswer}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-            </View>
-          )}
-
-          {step === 10 && (
-            <View style={styles.successWrap}>
-              <View style={styles.successIconWrap}>
-                <Ionicons name="heart" size={40} color={Colors.primary} />
+              <View style={styles.promptAnswerWrap}>
+                <Text style={styles.promptQuestion}>{prompts[promptIndex].question}</Text>
+                <TextInput
+                  style={styles.promptInput}
+                  placeholder="Write your answer..."
+                  placeholderTextColor={Colors.textTertiary}
+                  value={prompts[promptIndex].answer}
+                  onChangeText={(text) => {
+                    const updated = [...prompts]
+                    updated[promptIndex] = { ...updated[promptIndex], answer: text }
+                    setPrompts(updated)
+                  }}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  maxLength={300}
+                />
+                <Text style={styles.charCount}>{prompts[promptIndex].answer.length}/300</Text>
               </View>
-              <Text style={styles.successNote}>
-                Add photos and fill out your profile to get the most out of Meridian. Profiles with photos get 10× more likes.
-              </Text>
             </View>
           )}
         </Animated.View>
 
-        {/* CTA Button */}
+        {/* CTA */}
         <TouchableOpacity
-          style={styles.nextBtn}
+          style={[styles.nextBtn, step === 0 && styles.nextBtnLarge]}
           onPress={nextStep}
           disabled={saving}
           activeOpacity={0.85}
         >
-          {saving
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.nextBtnText}>
-                {step === TOTAL_STEPS - 1 ? 'Start discovering' : 'Continue'}
-              </Text>
-          }
+          {saving ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.nextBtnText}>{uploading ? 'Uploading photos...' : 'Saving...'}</Text>
+            </View>
+          ) : (
+            <Text style={styles.nextBtnText}>
+              {step === 0 ? "Let's go" : step === TOTAL_STEPS - 1 ? 'Finish' : 'Continue'}
+            </Text>
+          )}
         </TouchableOpacity>
 
-        {step >= 7 && step < 10 && (
+        {step >= 3 && step <= 7 && (
           <TouchableOpacity style={styles.skipBtn} onPress={nextStep}>
             <Text style={styles.skipText}>Skip for now</Text>
           </TouchableOpacity>
         )}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.background },
-  progressHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm, gap: Spacing.md },
+  safeArea: { flex: 1, backgroundColor: '#FAFAFA' },
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6, gap: 12 },
   backBtn: { padding: 4 },
   progressTrack: { flex: 1, height: 3, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: Colors.primary, borderRadius: 2 },
-  body: { padding: Spacing.xl, paddingBottom: 40 },
+  body: { padding: 24, paddingBottom: 40 },
+
   stepHeader: { marginBottom: 28 },
-  stepTag: { fontSize: 12, fontFamily: 'DMSans_700Bold', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 10 },
-  title: { fontSize: 34, fontFamily: 'DMSans_700Bold', color: Colors.text, marginBottom: 8, letterSpacing: -1, lineHeight: 40 },
+  stepTag: { fontSize: 11, fontFamily: 'DMSans_700Bold', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 },
+  title: { fontSize: 38, fontFamily: 'DMSans_700Bold', color: Colors.navy, letterSpacing: -1.2, lineHeight: 44, marginBottom: 8 },
   sub: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
-  fields: { gap: 4 },
-  inputWrap: { gap: 6, marginBottom: 12 },
+
+  // Welcome
+  welcomeWrap: { alignItems: 'flex-start', marginBottom: 8 },
+  logoWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: Colors.navy, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  logoLetter: { fontSize: 28, fontFamily: 'DMSans_700Bold', color: '#fff', letterSpacing: -1 },
+  welcomeTitle: { fontSize: 42, fontFamily: 'DMSans_700Bold', color: Colors.navy, letterSpacing: -1.5, lineHeight: 48, marginBottom: 12 },
+  welcomeSub: { fontSize: 16, color: Colors.textSecondary, lineHeight: 24, marginBottom: 32 },
+  requirementCards: { width: '100%', gap: 10 },
+  requirementCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: Colors.border },
+  reqTitle: { fontSize: 14, fontFamily: 'DMSans_600SemiBold', color: Colors.text, marginBottom: 2 },
+  reqSub: { fontSize: 12, color: Colors.textSecondary },
+
+  // Fields
+  fields: { gap: 6, marginBottom: 8 },
+  inputGroup: { gap: 6, marginBottom: 8 },
+  inputRow2: { flexDirection: 'row', gap: 10 },
   inputLabel: { fontSize: 13, fontFamily: 'DMSans_600SemiBold', color: Colors.text },
-  input: { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.lg, paddingHorizontal: Spacing.lg, paddingVertical: 14, fontSize: 15, color: Colors.text, backgroundColor: Colors.background, fontFamily: 'DMSans_400Regular' },
-  textarea: { height: 110, paddingTop: 14 },
-  fieldLabel: { fontSize: 12, fontFamily: 'DMSans_700Bold', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
-  optRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.background, marginBottom: 8 },
+  optional: { fontFamily: 'DMSans_400Regular', color: Colors.textTertiary },
+  input: { borderWidth: 1.5, borderColor: Colors.border, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: Colors.text, backgroundColor: '#fff', fontFamily: 'DMSans_400Regular' },
+  fieldSectionLabel: { fontSize: 12, fontFamily: 'DMSans_700Bold', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10, marginTop: 8 },
+  optRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: '#fff', marginBottom: 8 },
   optRowOn: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  optText: { fontSize: 14, color: Colors.text, fontFamily: 'DMSans_400Regular' },
+  optText: { fontSize: 15, color: Colors.text, fontFamily: 'DMSans_400Regular' },
   optTextOn: { color: Colors.primaryDark, fontFamily: 'DMSans_600SemiBold' },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.md, backgroundColor: Colors.surface, borderRadius: Radius.lg, marginTop: Spacing.lg, borderWidth: 1, borderColor: Colors.border },
-  toggle: { width: 38, height: 22, borderRadius: 11, backgroundColor: Colors.border, justifyContent: 'center', padding: 2 },
-  toggleOn: { backgroundColor: Colors.primary },
-  toggleThumb: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#fff', alignSelf: 'flex-start' },
-  toggleThumbOn: { alignSelf: 'flex-end' },
-  toggleLabel: { fontSize: 14, color: Colors.textSecondary, flex: 1 },
-  salarySteps: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  stepBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border },
-  stepBtnOn: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  stepBtnText: { fontSize: 13, color: Colors.textSecondary, fontFamily: 'DMSans_500Medium' },
-  stepBtnTextOn: { color: Colors.primaryDark, fontFamily: 'DMSans_700Bold' },
-  successWrap: { alignItems: 'center', paddingVertical: 20, gap: 16 },
-  successIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  successNote: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: 10 },
-  nextBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
+
+  // Photos
+  photoRequirement: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  photoCount: { fontSize: 32, fontFamily: 'DMSans_700Bold', color: Colors.primary },
+  photoCountLabel: { fontSize: 14, color: Colors.textSecondary, fontFamily: 'DMSans_500Medium' },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  photoThumb: { width: (width - 48 - 16) / 3, height: (width - 48 - 16) / 3 * 1.3, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  photoThumbImg: { width: '100%', height: '100%' },
+  photoRemove: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+  photoAdd: { width: (width - 48 - 16) / 3, height: (width - 48 - 16) / 3 * 1.3, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff' },
+  photoAddText: { fontSize: 12, color: Colors.primary, fontFamily: 'DMSans_500Medium' },
+  photoHint: { fontSize: 13, color: Colors.textTertiary, lineHeight: 18 },
+
+  // Prompts
+  promptScroll: { marginBottom: 16 },
+  promptChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: Colors.border, marginRight: 8, backgroundColor: '#fff' },
+  promptChipOn: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  promptChipText: { fontSize: 13, color: Colors.textSecondary, fontFamily: 'DMSans_400Regular' },
+  promptChipTextOn: { color: Colors.primaryDark, fontFamily: 'DMSans_600SemiBold' },
+  promptAnswerWrap: { backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: Colors.border, gap: 10 },
+  promptQuestion: { fontSize: 15, fontFamily: 'DMSans_600SemiBold', color: Colors.text },
+  promptInput: { fontSize: 15, color: Colors.text, lineHeight: 22, minHeight: 100, fontFamily: 'DMSans_400Regular' },
+  charCount: { fontSize: 11, color: Colors.textTertiary, textAlign: 'right', fontFamily: 'DMSans_400Regular' },
+
+  // CTA
+  nextBtn: { backgroundColor: Colors.navy, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
+  nextBtnLarge: { paddingVertical: 18 },
   nextBtnText: { color: '#fff', fontSize: 16, fontFamily: 'DMSans_700Bold', letterSpacing: 0.2 },
-  skipBtn: { alignItems: 'center', marginTop: 14, padding: 10 },
+  skipBtn: { alignItems: 'center', marginTop: 12, padding: 10 },
   skipText: { fontSize: 14, color: Colors.textTertiary },
 })
