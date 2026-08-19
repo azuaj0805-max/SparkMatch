@@ -24,16 +24,88 @@ const INTERESTED_IN = ['Men','Women','Non-binary people','Everyone']
 const REL_STYLES = ['Monogamous','Ethically non-monogamous','Still figuring it out']
 const SALARY_OPTIONS = Object.entries(SALARY_LABELS) as [SalaryRange, string][]
 const LOOKING_FOR_OPTIONS = Object.entries(LOOKING_FOR_LABELS) as [LookingFor, string][]
-const PROMPT_QUESTIONS = [
-  "My 5-year goal",
-  "The most ambitious thing I've done",
-  "Best career advice I've received",
-  "What I'm looking for",
-  "My work style in three words",
-  "What makes me different",
-  "My biggest passion outside of work",
+const PROMPT_CATEGORIES = [
+  {
+    name: "About me",
+    prompts: [
+      "A fun fact about me",
+      "I get way too excited about",
+      "The most spontaneous thing I have done",
+      "My most controversial opinion",
+      "The way to win me over is",
+      "I am known for",
+      "My love language is",
+      "I promise I am not like other people who",
+    ],
+  },
+  {
+    name: "What I am looking for",
+    prompts: [
+      "I am looking for someone who",
+      "The relationship I am looking for",
+      "Green flags I look for",
+      "My ideal Sunday looks like",
+      "I know it is a match when",
+      "The first thing I notice about someone",
+      "I fall for people who",
+      "Non-negotiables for me",
+    ],
+  },
+  {
+    name: "Professional",
+    prompts: [
+      "My 5-year goal",
+      "The most ambitious thing I have done",
+      "Best career advice I have received",
+      "My work style in three words",
+      "I am really good at",
+      "A skill I am currently building",
+      "The problem I want to solve",
+      "What drives me professionally",
+    ],
+  },
+  {
+    name: "Date preferences",
+    prompts: [
+      "The perfect first date",
+      "Best date I have ever been on",
+      "I am a better date when",
+      "Something I want to do on a first date",
+      "Date idea I am waiting to try",
+      "I show affection by",
+      "My idea of a perfect night",
+      "Dinner or adventure",
+    ],
+  },
+  {
+    name: "Outside of work",
+    prompts: [
+      "My free time looks like",
+      "I am currently obsessed with",
+      "A hobby I would love to share with someone",
+      "The show I am rewatching for the 3rd time",
+      "My go-to workout",
+      "Best trip I have ever taken",
+      "I am happiest when",
+      "Hidden talent",
+    ],
+  },
+  {
+    name: "Story time",
+    prompts: [
+      "Craziest thing that has ever happened to me",
+      "A story my friends always ask me to tell",
+      "Most embarrassing thing that turned into a great story",
+      "The time I completely surprised myself",
+      "A lesson I learned the hard way",
+      "Plot twist in my life",
+      "The best decision I ever made on a whim",
+      "Something that changed my perspective",
+    ],
+  },
 ]
 
+const PROMPT_QUESTIONS = PROMPT_CATEGORIES.flatMap(c => c.prompts)
 const STEPS = [
   { tag: 'Welcome', title: "Let's build\nyour profile.", sub: null },
   { tag: 'About you', title: "What's your\nname?", sub: null },
@@ -140,7 +212,8 @@ export function OnboardingScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: false,
+      selectionLimit: 1,
       quality: 0.8,
       base64: true,
     })
@@ -456,9 +529,27 @@ export function OnboardingScreen() {
               <Text style={styles.title}>Answer a{'\n'}prompt.</Text>
               <Text style={styles.sub}>Required. Choose a question and write your answer.</Text>
 
+              <Text style={styles.fieldSectionLabel}>Choose a category</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                {PROMPT_CATEGORIES.map((cat, ci) => (
+                  <TouchableOpacity
+                    key={ci}
+                    style={[styles.promptChip, prompts[promptIndex].question && PROMPT_CATEGORIES[ci].prompts.includes(prompts[promptIndex].question) && styles.promptChipOn]}
+                    onPress={() => {
+                      const updated = [...prompts]
+                      updated[promptIndex] = { ...updated[promptIndex], question: cat.prompts[0] }
+                      setPrompts(updated)
+                    }}
+                  >
+                    <Text style={[styles.promptChipText, prompts[promptIndex].question && PROMPT_CATEGORIES[ci].prompts.includes(prompts[promptIndex].question) && styles.promptChipTextOn]}>
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
               <Text style={styles.fieldSectionLabel}>Choose a question</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.promptScroll}>
-                {PROMPT_QUESTIONS.map((q, i) => (
+                {(PROMPT_CATEGORIES.find(c => c.prompts.includes(prompts[promptIndex].question)) ?? PROMPT_CATEGORIES[0]).prompts.map((q, i) => (
                   <TouchableOpacity
                     key={i}
                     style={[styles.promptChip, prompts[promptIndex].question === q && styles.promptChipOn]}
