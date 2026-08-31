@@ -169,7 +169,11 @@ export function OnboardingScreen() {
 
   function validateStep(): boolean {
     if (step === 1 && (!firstName.trim() || !age || !city.trim())) {
-      Alert.alert('Required', 'Please fill in your name, age, and city.')
+      Alert.alert("Required", "Please fill in your name, age, and city.")
+      return false
+    }
+    if (step === 1 && parseInt(age) < 18) {
+      Alert.alert("Age requirement", "You must be 18 or older to use Meridian.")
       return false
     }
     if (step === 2 && !jobTitle.trim()) {
