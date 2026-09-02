@@ -22,7 +22,6 @@ export function useNotifications() {
 
   useEffect(() => {
     if (!session) return
-    registerForPushNotifications()
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification received:', notification)
@@ -38,40 +37,42 @@ export function useNotifications() {
     }
   }, [session])
 
-  async function registerForPushNotifications() {
-    if (!Device.isDevice) return
+  return { registerForPushNotifications }
+}
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync()
-    let finalStatus = existingStatus
+export async function registerForPushNotifications(userId: string) {
+  if (!Device.isDevice) return
 
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync()
-      finalStatus = status
+  const { status: existingStatus } = await Notifications.getPermissionsAsync()
+  let finalStatus = existingStatus
+
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync()
+    finalStatus = status
+  }
+
+  if (finalStatus !== 'granted') return
+
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync()
+    const token = tokenData.data
+
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#6E8CFF',
+      })
     }
 
-    if (finalStatus !== 'granted') return
-
-    try {
-      const tokenData = await Notifications.getExpoPushTokenAsync()
-      const token = tokenData.data
-
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#D85A30',
-        })
-      }
-
-      if (session && token) {
-        await supabase
-          .from('profiles')
-          .update({ push_token: token })
-          .eq('id', session.user.id)
-      }
-    } catch (e) {
-      console.log('Push token error:', e)
+    if (token) {
+      await supabase
+        .from('profiles')
+        .update({ push_token: token })
+        .eq('id', userId)
     }
+  } catch (e) {
+    console.log('Push token error:', e)
   }
 }
