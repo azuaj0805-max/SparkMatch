@@ -281,8 +281,8 @@ export function ProfileScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Account</Text>
           <AccountRow icon="pencil-outline" label="Edit profile & photos" onPress={() => navigation.navigate('EditProfile')} />
-          <AccountRow icon="document-text-outline" label="Privacy Policy" onPress={() => navigation.navigate('Legal', { type: 'privacy' })} />
-          <AccountRow icon="reader-outline" label="Terms of Service" onPress={() => navigation.navigate('Legal', { type: 'terms' })} />
+          <AccountRow icon="document-text-outline" label="Privacy Policy" onPress={() => require('expo-linking').openURL('https://azuaj0805-max.github.io/SparkMatch/privacy.html')} />
+          <AccountRow icon="reader-outline" label="Terms of Service" onPress={() => require('expo-linking').openURL('https://azuaj0805-max.github.io/SparkMatch/terms.html')} />
           <AccountRow icon="ban-outline" label="Block or report someone" onPress={() => Alert.alert('Block or report', 'Open a match, tap their name, then tap ⋯ to block or report.')} />
           <AccountRow icon="log-out-outline" label="Sign out" onPress={() => Alert.alert('Sign out', 'Are you sure?', [{ text: 'Cancel' }, { text: 'Sign out', style: 'destructive', onPress: signOut }])} />
           <AccountRow icon="trash-outline" label="Delete account" onPress={handleDeleteAccount} danger last />

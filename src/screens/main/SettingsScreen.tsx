@@ -141,12 +141,12 @@ export function SettingsScreen() {
           <SettingsRow
             icon="document-text-outline"
             label="Privacy Policy"
-            onPress={() => navigation.navigate('Legal', { type: 'privacy' })}
+            onPress={() => require('expo-linking').openURL('https://azuaj0805-max.github.io/SparkMatch/privacy.html')}
           />
           <SettingsRow
             icon="reader-outline"
             label="Terms of Service"
-            onPress={() => navigation.navigate('Legal', { type: 'terms' })}
+            onPress={() => require('expo-linking').openURL('https://azuaj0805-max.github.io/SparkMatch/terms.html')}
             last
           />
         </View>
