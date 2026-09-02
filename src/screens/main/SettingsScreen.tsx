@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Alert, Switch,
+  Alert, Switch, Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -141,12 +141,12 @@ export function SettingsScreen() {
           <SettingsRow
             icon="document-text-outline"
             label="Privacy Policy"
-            onPress={() => require('expo-linking').openURL('https://azuaj0805-max.github.io/SparkMatch/privacy.html')}
+            onPress={() => Linking.openURL('https://azuaj0805-max.github.io/SparkMatch/privacy.html')}
           />
           <SettingsRow
             icon="reader-outline"
             label="Terms of Service"
-            onPress={() => require('expo-linking').openURL('https://azuaj0805-max.github.io/SparkMatch/terms.html')}
+            onPress={() => Linking.openURL('https://azuaj0805-max.github.io/SparkMatch/terms.html')}
             last
           />
         </View>
