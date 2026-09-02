@@ -8,6 +8,7 @@ import { useNotifications, registerForPushNotifications } from './src/hooks/useN
 import { NotificationPrompt } from './src/components/NotificationPrompt'
 import { useAuth } from './src/hooks/useAuth'
 import { AuthProvider } from './src/hooks/useAuth'
+import { ErrorBoundary } from "./src/components/ErrorBoundary"
 
 function AppInner() {
   useNotifications()

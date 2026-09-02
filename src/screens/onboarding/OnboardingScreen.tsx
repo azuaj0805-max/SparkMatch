@@ -342,9 +342,7 @@ export function OnboardingScreen() {
           {/* Step 0 — Welcome */}
           {step === 0 && (
             <View style={styles.welcomeWrap}>
-              <View style={styles.logoWrap}>
-                <Text style={styles.logoLetter}>M</Text>
-              </View>
+              <Image source={require("../../../assets/logo.png")} style={{ width: 64, height: 64, borderRadius: 16, marginBottom: 24 }} resizeMode="contain" />
               <Text style={styles.welcomeTitle}>Welcome to{'\n'}Meridian.</Text>
               <Text style={styles.welcomeSub}>
                 The dating app built for ambitious people. We take 5 minutes to set up — and it's worth it.
