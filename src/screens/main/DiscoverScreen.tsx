@@ -123,8 +123,8 @@ export function DiscoverScreen() {
           <View style={styles.emptyIconWrap}>
             <Ionicons name="compass-outline" size={32} color={Colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>You're all caught up</Text>
-          <Text style={styles.emptySub}>Check back later for new people near you.</Text>
+          <Text style={styles.emptyTitle}>You've seen everyone nearby</Text>
+          <Text style={styles.emptySub}>New people join every day. Try widening your filters or check back tomorrow.</Text>
           <TouchableOpacity style={styles.adjustBtn} onPress={() => setFilterModal(true)}>
             <Text style={styles.adjustBtnText}>Adjust filters</Text>
           </TouchableOpacity>

@@ -94,8 +94,8 @@ export function MatchesScreen() {
                 <View style={styles.emptyIconWrap}>
                   <Ionicons name="chatbubble-outline" size={36} color={Colors.primary} />
                 </View>
-                <Text style={styles.emptyTitle}>No matches yet</Text>
-                <Text style={styles.emptySub}>Like someone to get started.</Text>
+                <Text style={styles.emptyTitle}>Your matches will appear here</Text>
+                <Text style={styles.emptySub}>Start by liking someone on Discover. When they like you back, you match.</Text>
               </View>
             )}
           </>

@@ -53,7 +53,8 @@ export default function App() {
   if (!fontsLoaded) return null
 
   return (
-    <AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
       <View style={{ flex: 1 }}>
         <AppInner />
         {showSplash && (
@@ -61,5 +62,6 @@ export default function App() {
         )}
       </View>
     </AuthProvider>
+      </ErrorBoundary>
   )
 }

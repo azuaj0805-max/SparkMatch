@@ -52,8 +52,8 @@ export function LikesScreen() {
           <View style={styles.emptyIconWrap}>
             <Ionicons name="heart-outline" size={36} color={Colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>No likes yet</Text>
-          <Text style={styles.emptySub}>When someone likes your profile they'll appear here.</Text>
+          <Text style={styles.emptyTitle}>No one has liked you yet</Text>
+          <Text style={styles.emptySub}>Keep your profile sharp and likes will follow.</Text>
         </View>
       ) : (
         <View style={styles.queueWrap}>
