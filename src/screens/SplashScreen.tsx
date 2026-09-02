@@ -9,7 +9,7 @@ type Props = {
 }
 
 export function SplashScreen({ onFinish }: Props) {
-  const logoScale = useRef(new Animated.Value(0.3)).current
+  const logoScale = useRef(new Animated.Value(0.8)).current
   const logoOpacity = useRef(new Animated.Value(0)).current
   const textOpacity = useRef(new Animated.Value(0)).current
   const taglineOpacity = useRef(new Animated.Value(0)).current
@@ -17,38 +17,33 @@ export function SplashScreen({ onFinish }: Props) {
 
   useEffect(() => {
     Animated.sequence([
-      // Logo appears
       Animated.parallel([
         Animated.spring(logoScale, {
           toValue: 1,
-          tension: 60,
-          friction: 8,
+          tension: 50,
+          friction: 9,
           useNativeDriver: true,
         }),
         Animated.timing(logoOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
       ]),
-      // App name appears
       Animated.timing(textOpacity, {
         toValue: 1,
-        duration: 300,
+        duration: 350,
         useNativeDriver: true,
       }),
-      // Tagline appears
       Animated.timing(taglineOpacity, {
         toValue: 1,
-        duration: 300,
+        duration: 350,
         useNativeDriver: true,
       }),
-      // Hold
-      Animated.delay(800),
-      // Fade out
+      Animated.delay(900),
       Animated.timing(screenOpacity, {
         toValue: 0,
-        duration: 400,
+        duration: 500,
         useNativeDriver: true,
       }),
     ]).start(() => onFinish())
@@ -57,28 +52,23 @@ export function SplashScreen({ onFinish }: Props) {
   return (
     <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
       <View style={styles.content}>
-        {/* Logo mark */}
         <Animated.View style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
           <View style={styles.logoInner}>
             <Text style={styles.logoM}>M</Text>
           </View>
-          {/* Decorative rings */}
           <View style={styles.ring1} />
           <View style={styles.ring2} />
         </Animated.View>
 
-        {/* App name */}
         <Animated.Text style={[styles.appName, { opacity: textOpacity }]}>
           Meridian
         </Animated.Text>
 
-        {/* Tagline */}
         <Animated.Text style={[styles.tagline, { opacity: taglineOpacity }]}>
           Where ambition meets connection
         </Animated.Text>
       </View>
 
-      {/* Bottom dot */}
       <Animated.View style={[styles.bottomDot, { opacity: taglineOpacity }]} />
     </Animated.View>
   )
@@ -88,57 +78,62 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: "#101E3B",
+    backgroundColor: '#101E3B',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 999,
   },
-  content: { alignItems: 'center', gap: 16 },
+  content: { alignItems: 'center', gap: 14 },
   logoWrap: {
-    width: 100, height: 100,
+    width: 110, height: 110,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
     position: 'relative',
   },
   logoInner: {
-    width: 80, height: 80,
-    borderRadius: 24,
+    width: 84, height: 84,
+    borderRadius: 26,
     backgroundColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
     zIndex: 2,
   },
   logoM: {
-    fontSize: 44, fontWeight: '800',
-    color: '#fff', letterSpacing: -2,
+    fontSize: 46,
+    fontFamily: 'DMSans_700Bold',
+    color: '#fff',
+    letterSpacing: -2,
   },
   ring1: {
     position: 'absolute',
-    width: 92, height: 92,
-    borderRadius: 28,
+    width: 96, height: 96,
+    borderRadius: 30,
     borderWidth: 1.5,
     borderColor: 'rgba(110, 140, 255, 0.3)',
   },
   ring2: {
     position: 'absolute',
-    width: 106, height: 106,
-    borderRadius: 32,
+    width: 110, height: 110,
+    borderRadius: 34,
     borderWidth: 1,
-    borderColor: 'rgba(110, 140, 255, 0.15)',
+    borderColor: 'rgba(110, 140, 255, 0.12)',
   },
   appName: {
-    fontSize: 36, fontWeight: '800',
-    color: '#fff', letterSpacing: -1,
+    fontSize: 38,
+    fontFamily: 'DMSans_700Bold',
+    color: '#fff',
+    letterSpacing: -1.2,
   },
   tagline: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 0.2,
+    fontFamily: 'DMSans_400Regular',
+    color: 'rgba(255,255,255,0.45)',
+    letterSpacing: 0.3,
   },
   bottomDot: {
     position: 'absolute',
-    bottom: 48,
-    width: 6, height: 6,
-    borderRadius: 3,
+    bottom: 52,
+    width: 5, height: 5,
+    borderRadius: 2.5,
     backgroundColor: Colors.primary,
   },
 })
