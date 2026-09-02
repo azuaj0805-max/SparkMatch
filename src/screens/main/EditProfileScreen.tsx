@@ -28,7 +28,7 @@ const PROMPT_QUESTIONS = ["My 5-year goal","I'm looking for","Most ambitious thi
 
 export function EditProfileScreen() {
   const { profile, refreshProfile } = useAuth()
-  const { pickAndUploadPhoto, deletePhoto, uploading } = usePhotoUpload()
+  const { pickAndUploadPhoto, deletePhoto, uploading, uploadProgress } = usePhotoUpload()
   const navigation = useNavigation<any>()
   const [saving, setSaving] = useState(false)
 

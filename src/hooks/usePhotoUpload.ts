@@ -7,6 +7,7 @@ import { Alert } from 'react-native'
 export function usePhotoUpload() {
   const { session, refreshProfile } = useAuth()
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   async function pickAndUploadPhoto(): Promise<string | null> {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -18,28 +19,35 @@ export function usePhotoUpload() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
+      allowsMultipleSelection: false,
       quality: 0.8,
       base64: true,
     })
 
     if (result.canceled) return null
-    const asset = result.assets[0]
-    if (!asset || !asset.base64) return null
+    const asset = result.assets?.[0]
+    if (!asset || !asset.base64) {
+      Alert.alert('Error', 'Could not read photo. Please try again.')
+      return null
+    }
 
-    // Upload immediately without Alert confirmation
-    return await uploadPhoto(asset.base64, asset.uri)
+    return await uploadPhoto(asset.base64)
   }
 
-  async function uploadPhoto(base64: string, uri: string): Promise<string | null> {
+  async function uploadPhoto(base64: string): Promise<string | null> {
+    if (!session) return null
     setUploading(true)
+    setUploadProgress(0)
+
     try {
-      const fileName = `${session?.user.id}/${Date.now()}.jpg`
+      const fileName = `${session.user.id}/${Date.now()}.jpg`
       const byteCharacters = atob(base64)
       const byteNumbers = new Array(byteCharacters.length)
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i)
       }
       const byteArray = new Uint8Array(byteNumbers)
+      setUploadProgress(30)
 
       const { error: uploadError } = await supabase.storage
         .from('Photos')
@@ -50,6 +58,8 @@ export function usePhotoUpload() {
         return null
       }
 
+      setUploadProgress(70)
+
       const { data: { publicUrl } } = supabase.storage
         .from('Photos')
         .getPublicUrl(fileName)
@@ -57,15 +67,16 @@ export function usePhotoUpload() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('photos')
-        .eq('id', session?.user.id)
+        .eq('id', session.user.id)
         .maybeSingle()
 
       const existingPhotos = profileData?.photos ?? []
       await supabase
         .from('profiles')
         .update({ photos: [...existingPhotos, publicUrl] })
-        .eq('id', session?.user.id)
+        .eq('id', session.user.id)
 
+      setUploadProgress(100)
       await refreshProfile()
       return publicUrl
     } catch (e) {
@@ -73,6 +84,7 @@ export function usePhotoUpload() {
       return null
     } finally {
       setUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -93,5 +105,5 @@ export function usePhotoUpload() {
     await refreshProfile()
   }
 
-  return { pickAndUploadPhoto, deletePhoto, uploading }
+  return { pickAndUploadPhoto, deletePhoto, uploading, uploadProgress }
 }
