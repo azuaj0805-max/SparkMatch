@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import {
-  View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions,
+  View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -36,13 +36,7 @@ export function WelcomeScreen({ onGetStarted, onSignIn }: Props) {
       {/* Dark navy hero */}
       <View style={styles.hero}>
         <Animated.View style={[styles.heroContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.logoWrap}>
-            <View style={styles.logoInner}>
-              <Text style={styles.logoM}>M</Text>
-            </View>
-            <View style={styles.ring1} />
-            <View style={styles.ring2} />
-          </View>
+          <Image source={require("../../../assets/logo.png")} style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 8 }} resizeMode="contain" />
           <Text style={styles.heroTitle}>Meridian</Text>
           <Text style={styles.heroSub}>Dating for ambitious people</Text>
         </Animated.View>
