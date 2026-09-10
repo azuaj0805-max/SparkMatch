@@ -36,7 +36,7 @@ export function WelcomeScreen({ onGetStarted, onSignIn }: Props) {
       {/* Dark navy hero */}
       <View style={styles.hero}>
         <Animated.View style={[styles.heroContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Image source={require("../../../assets/logo.png")} style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 8 }} resizeMode="contain" />
+          <Image source={require("../../../assets/meridian-logo.png")} style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 8 }} resizeMode="contain" />
           <Text style={styles.heroTitle}>Meridian</Text>
           <Text style={styles.heroSub}>Dating for ambitious people</Text>
         </Animated.View>
