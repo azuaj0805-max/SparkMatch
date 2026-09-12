@@ -108,7 +108,11 @@ export function useDiscover() {
         })
       }
 
+      const now = new Date()
       const sorted = filtered.sort((a, b) => {
+        const aBosted = (a as any).is_boosted && new Date((a as any).boost_expires_at) > now ? 1 : 0
+        const bBoosted = (b as any).is_boosted && new Date((b as any).boost_expires_at) > now ? 1 : 0
+        if (bBoosted !== aBosted) return bBoosted - aBosted
         const distA = Math.abs(((a as any).elo_score ?? 1000) - myElo)
         const distB = Math.abs(((b as any).elo_score ?? 1000) - myElo)
         return distA - distB

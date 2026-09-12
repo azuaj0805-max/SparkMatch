@@ -133,6 +133,31 @@ export function LikesScreen() {
 export function ProfileScreen() {
   const { profile, signOut } = useAuth()
   const navigation = useNavigation<any>()
+  const { session } = useAuth()
+
+  async function handleBoost() {
+    if (!profile) return
+    const isCurrentlyBoosted = profile.is_boosted && new Date((profile as any).boost_expires_at) > new Date()
+    if (isCurrentlyBoosted) {
+      Alert.alert("Already boosted", "Your profile is currently boosted. Come back when it expires.")
+      return
+    }
+    Alert.alert(
+      "Boost your profile",
+      "Your profile will appear at the top of the discover feed for 24 hours.",
+      [
+        { text: "Cancel" },
+        {
+          text: "Boost now",
+          onPress: async () => {
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            await supabase.from("profiles").update({ is_boosted: true, boost_expires_at: expiresAt }).eq("id", profile.id)
+            Alert.alert("Boosted!", "Your profile is now at the top of the feed for 24 hours.")
+          }
+        }
+      ]
+    )
+  }
 
   if (!profile) return null
 
@@ -168,6 +193,13 @@ export function ProfileScreen() {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity
+            style={styles.boostBtn}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleBoost() }}
+          >
+            <Ionicons name="flash-outline" size={14} color="#F59E0B" />
+            <Text style={styles.boostBtnText}>Boost</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.previewBtn}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate("Settings") }}
@@ -343,6 +375,8 @@ const styles = StyleSheet.create({
   navBtnPrimaryText: { color: '#fff' },
   previewBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.surface, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border },
   previewBtnText: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: Colors.textSecondary },
+  boostBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FEF3C7", paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full },
+  boostBtnText: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: "#F59E0B" },
   editBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full },
   editBtnText: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: Colors.primary },
   profileScroll: { padding: Spacing.xl, gap: 12, paddingBottom: 100 },

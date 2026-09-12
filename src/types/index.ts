@@ -34,6 +34,9 @@ export type Profile = {
   smoking: string | null
   religion: string | null
   prompts: Prompt[]
+  invite_code: string | null
+  invited_by: string | null
+  invite_count: number
 }
 
 export type Prompt = {
