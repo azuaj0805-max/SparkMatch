@@ -229,6 +229,21 @@ export function ProfileScreen() {
 
         <ProfileCompletion profile={profile} />
 
+        <TouchableOpacity
+          style={styles.premiumBanner}
+          onPress={() => navigation.navigate("Premium")}
+          activeOpacity={0.85}
+        >
+          <View style={styles.premiumBannerLeft}>
+            <Ionicons name="flash" size={18} color="#F59E0B" />
+            <View>
+              <Text style={styles.premiumBannerTitle}>Meridian Premium</Text>
+              <Text style={styles.premiumBannerSub}>Premium members get 3x more matches</Text>
+            </View>
+          </View>
+          <Text style={styles.premiumBannerCta}>Upgrade →</Text>
+        </TouchableOpacity>
+
         {(profile.photos ?? []).length > 0 ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Photos</Text>
@@ -365,6 +380,11 @@ const styles = StyleSheet.create({
   boostBtnText: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: "#F59E0B" },
   editBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full },
   editBtnText: { fontSize: 13, fontFamily: "DMSans_600SemiBold", color: Colors.primary },
+  premiumBanner: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FEF3C7", borderRadius: Radius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: "#FCD34D" },
+  premiumBannerLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  premiumBannerTitle: { fontSize: 14, fontFamily: "DMSans_700Bold", color: "#92400E" },
+  premiumBannerSub: { fontSize: 12, color: "#B45309", fontFamily: "DMSans_400Regular" },
+  premiumBannerCta: { fontSize: 13, fontFamily: "DMSans_700Bold", color: "#F59E0B" },
   profileScroll: { padding: Spacing.xl, gap: 12, paddingBottom: 100 },
   profileHero: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: Spacing.lg, backgroundColor: Colors.surface, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.border },
   profileName: { fontSize: 20, fontFamily: "DMSans_700Bold", color: Colors.text, letterSpacing: -0.3 },
