@@ -139,24 +139,10 @@ export function ProfileScreen() {
     if (!profile) return
     const isCurrentlyBoosted = profile.is_boosted && new Date((profile as any).boost_expires_at) > new Date()
     if (isCurrentlyBoosted) {
-      Alert.alert("Already boosted", "Your profile is currently boosted. Come back when it expires.")
+      Alert.alert("Already boosted", "Your profile is currently boosted and at the top of the feed.")
       return
     }
-    Alert.alert(
-      "Boost your profile",
-      "Your profile will appear at the top of the discover feed for 24 hours.",
-      [
-        { text: "Cancel" },
-        {
-          text: "Boost now",
-          onPress: async () => {
-            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-            await supabase.from("profiles").update({ is_boosted: true, boost_expires_at: expiresAt }).eq("id", profile.id)
-            Alert.alert("Boosted!", "Your profile is now at the top of the feed for 24 hours.")
-          }
-        }
-      ]
-    )
+    navigation.navigate("Premium")
   }
 
   if (!profile) return null
